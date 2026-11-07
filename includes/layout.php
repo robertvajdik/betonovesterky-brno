@@ -152,12 +152,23 @@ $navLink = function (string $route, string $key) use ($current) {
   <div class="container footer__bottom">
     <span>© <?= date('Y') ?> <?= e(site('owner')) ?> · <?= te('footer.ico') ?> <?= e(site('ico')) ?></span>
     <a href="<?= e(privacy_url()) ?>"<?= $current === 'privacy' ? ' aria-current="page"' : '' ?>><?= te('footer.privacy') ?></a>
+    <?php if ($gaId = ga_id()): ?><button type="button" class="link-btn footer__consent" data-consent-open><?= te('consent.settings') ?></button><?php endif; ?>
   </div>
 </footer>
 
 <a href="<?= e(tel_href(site('phone'))) ?>" class="call-fab" aria-label="<?= te('contact.phone') ?>">
   <?= icon('phone', 24) ?>
 </a>
+
+<?php if ($gaId): /* lišta souhlasu: Google Analytics se načte až po kliknutí na „Povolit měření“ */ ?>
+<div class="consent" data-consent data-ga="<?= e($gaId) ?>" role="dialog" aria-live="polite" aria-label="<?= te('consent.title') ?>" hidden>
+  <div class="consent__text"><strong><?= te('consent.title') ?></strong> <?= te('consent.text') ?> <a href="<?= e(privacy_url()) ?>"><?= te('consent.more') ?></a></div>
+  <div class="consent__actions">
+    <button type="button" class="btn btn--small btn--light" data-consent-choice="denied"><?= te('consent.reject') ?></button>
+    <button type="button" class="btn btn--small" data-consent-choice="granted"><?= te('consent.accept') ?></button>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="lightbox" hidden>
   <button class="lightbox__close" aria-label="<?= te('ui.close') ?>">×</button>

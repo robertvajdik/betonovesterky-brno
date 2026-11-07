@@ -120,6 +120,7 @@ function fb_http(string $url, int $timeout, int $maxBytes = 2 * 1024 * 1024): ?s
     ]);
     $body = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    if ($body === false) error_log('Facebook: ' . curl_error($ch) . ' (' . strtok($url, '?') . ')');
     curl_close($ch);
     if (!is_string($body) || ($code >= 400 && $code !== 400)) return null;   // 400 = chyba API v JSONu, zpracuje volající
     return $body;

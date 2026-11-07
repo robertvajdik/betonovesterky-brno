@@ -174,6 +174,8 @@ if ($contract && !$edit && !$errors):
   <span><?= e($contract['number']) ?></span>
   <a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.contract.back_admin') ?></a>
   <a href="<?= e($self . '?id=' . $id . '&edit=1') ?>"><?= te('adm.edit') ?></a>
+  <?php if ($dep > 0): ?><a href="<?= e(url('admin/invoice.php?contract=' . $id . '&kind=deposit')) ?>"><?= te('adm.contract.invoice_deposit') ?></a><?php endif; ?>
+  <a href="<?= e(url('admin/invoice.php?contract=' . $id)) ?>"><?= te('adm.contract.invoice') ?></a>
   <button type="button" class="primary" onclick="window.print()"><?= te('adm.contract.print') ?></button>
 </div>
 

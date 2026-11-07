@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 
 function db_migrate(): void
 {
@@ -87,6 +87,23 @@ function db_migrate(): void
             }
         }
     }
+
+    // v12: faktury (údaje faktury jako JSON, částka k úhradě a data pro přehled)
+    $try("CREATE TABLE IF NOT EXISTS invoices (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        number      VARCHAR(30) NOT NULL UNIQUE,
+        inquiry_id  INT UNSIGNED NULL,
+        contract_id INT UNSIGNED NULL,
+        data        MEDIUMTEXT NOT NULL,
+        total       DECIMAL(12,2) NOT NULL DEFAULT 0,
+        issued      DATE NOT NULL,
+        due         DATE NOT NULL,
+        paid_at     DATE NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME NULL,
+        INDEX idx_inv_inquiry (inquiry_id),
+        INDEX idx_inv_contract (contract_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';

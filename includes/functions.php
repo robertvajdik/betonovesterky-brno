@@ -54,7 +54,10 @@ function t(string $key, array $vars = []): string
 {
     $r = props()[$key] ?? null;
     if ($r === null) {
-        $v = $key;
+        // texty administrace: když řádek v DB chybí (ještě neproběhla aktualizace), použije se česká záloha
+        static $admDefaults = null;
+        if (str_starts_with($key, 'adm.')) $admDefaults ??= (array) require __DIR__ . '/admin-texts.php';
+        $v = $admDefaults[$key] ?? $key;
     } else {
         $v = (lang() === 'en' && ($r['value_en'] ?? '') !== '') ? $r['value_en'] : (string) $r['value_cs'];
     }
@@ -122,6 +125,13 @@ function whatsapp_url(): string
     if (strlen($n) === 9) $n = '420' . $n;              // české číslo bez předvolby
     $msg = t('contact.wa_text');
     return 'https://wa.me/' . $n . ($msg !== '' && $msg !== 'contact.wa_text' ? '?text=' . rawurlencode($msg) : '');
+}
+
+/** Measurement ID Google Analytics, pokud je měření zapnuté a ID má správný tvar; jinak '' */
+function ga_id(): string
+{
+    $id = strtoupper(trim((string) (props()['ga.id']['value_cs'] ?? '')));
+    return prop_bool('ga.enabled') && preg_match('~^G-[A-Z0-9]{4,}$~', $id) ? $id : '';
 }
 
 /** Zásady ochrany osobních údajů: externí odkaz z nastavení, jinak vlastní stránka webu */

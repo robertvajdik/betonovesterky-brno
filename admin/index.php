@@ -56,6 +56,7 @@ if (($_GET['logout'] ?? '') === '1') {
 
 $logged = !empty($_SESSION['admin_id']);
 $tab    = (string) ($_GET['tab'] ?? 'inquiries');
+if ($logged && $tab === 'invoices') { header('Location: ' . url('admin/invoice.php?list=1'), true, 303); exit; }   // přehled faktur má vlastní stránku
 
 // ---------- Akce po přihlášení ----------
 if ($logged && $action !== '') {
@@ -207,13 +208,16 @@ if ($logged && $action !== '') {
                 if (!isset($all[$key]) || !is_array($v)) continue;
                 $type = $all[$key]['type'];
                 if ($type === 'image') continue;
-                $cs = $type === 'bool' ? (!empty($v['cs']) ? '1' : '0') : mb_substr((string) ($v['cs'] ?? ''), 0, 20000);
-                $en = $type === 'bool' ? '' : mb_substr((string) ($v['en'] ?? ''), 0, 20000);
-                q("UPDATE properties SET value_cs = ?, value_en = ? WHERE pkey = ?", [$cs, $en, $key]);
+                $cs = $type === 'bool' ? (!empty($v['cs']) ? '1' : '0') : mb_substr(trim((string) ($v['cs'] ?? '')), 0, 20000);
+                if ($type !== 'bool' && array_key_exists('en', $v)) {
+                    q("UPDATE properties SET value_cs = ?, value_en = ? WHERE pkey = ?", [$cs, mb_substr(trim((string) $v['en']), 0, 20000), $key]);
+                } else {
+                    q("UPDATE properties SET value_cs = ? WHERE pkey = ?", [$cs, $key]);   // pole bez EN verze: EN nechat
+                }
             }
-            // bool checkboxy, které nepřišly = vypnuto
-            foreach ($all as $key => $r) {
-                if ($r['type'] === 'bool' && str_starts_with($key, (string) ($_POST['grp_prefix'] ?? '~')) && !isset($_POST['p'][$key])) {
+            // bool checkboxy zobrazené ve formuláři, které nepřišly = vypnuto
+            foreach ((array) ($_POST['bools'] ?? []) as $key) {
+                if (isset($all[$key]) && $all[$key]['type'] === 'bool' && !isset($_POST['p'][$key])) {
                     q("UPDATE properties SET value_cs = '0' WHERE pkey = ?", [$key]);
                 }
             }
@@ -238,10 +242,10 @@ if ($logged && $action !== '') {
         case 'seo_generate':
             props(true);
             $r = write_seo_files();
-            back('tab=settings&grp=seo', ($r['robots.txt'] && $r['sitemap.xml']) ? t('adm.seo.generated') : t('adm.seo.err_write'));
+            back('tab=settings&grp=robots', ($r['robots.txt'] && $r['sitemap.xml']) ? t('adm.seo.generated') : t('adm.seo.err_write'));
         case 'seo_remove':
             foreach (['robots.txt', 'sitemap.xml'] as $f) if (is_file(ROOT_DIR . "/$f")) @unlink(ROOT_DIR . "/$f");
-            back('tab=settings&grp=seo', t('adm.seo.removed'));
+            back('tab=settings&grp=robots', t('adm.seo.removed'));
     }
     back("tab=$tab");
 }
@@ -280,6 +284,7 @@ $tabs = [
     'projects'  => t('adm.tab.projects'),
     'form'      => t('adm.tab.form'),
     'texts'     => t('adm.tab.texts'),
+    'invoices'  => t('adm.tab.invoices'),
     'settings'  => t('adm.tab.settings'),
 ];
 ?><!doctype html>
@@ -334,7 +339,10 @@ $tabs = [
       </nav>
       <?php if (!$rows): ?><p class="muted"><?= te('adm.inq.empty') ?></p><?php endif; ?>
       <?php foreach ($rows as $r): $data = json_decode((string) $r['data'], true) ?: [];
-            $msgs = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$r['id']])->fetchAll(); ?>
+            $msgs = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$r['id']])->fetchAll();
+            // cena a záloha ze smluv, faktury k poptávce
+            $deals = q("SELECT id, number, data FROM contracts WHERE inquiry_id = ? ORDER BY id DESC", [$r['id']])->fetchAll();
+            $invs  = q("SELECT id, number, total, due, paid_at, data FROM invoices WHERE inquiry_id = ? ORDER BY id DESC", [$r['id']])->fetchAll(); ?>
         <article class="item <?= $r['is_read'] ? '' : 'item--new' ?>" id="q<?= (int) $r['id'] ?>">
           <div class="item__head">
             <strong>#<?= (int) $r['id'] ?> <?= e($r['name']) ?></strong>
@@ -344,6 +352,25 @@ $tabs = [
           </div>
           <p><a href="mailto:<?= e($r['email']) ?>"><?= e($r['email']) ?></a>
             <?php if ($r['phone']): ?> · <a href="<?= e(tel_href($r['phone'])) ?>"><?= e($r['phone']) ?></a><?php endif; ?></p>
+          <?php if ($deals || $invs): ?>
+            <ul class="deal">
+              <?php foreach ($deals as $cn): $cd = (array) json_decode($cn['data'], true);
+                    $net = (float) str_replace([',', ' '], ['.', ''], (string) ($cd['price_net'] ?? '0'));
+                    $gross = round($net * (1 + (int) ($cd['vat_rate'] ?? 0) / 100), 2);
+                    $dep = (float) str_replace([',', ' '], ['.', ''], (string) ($cd['deposit'] ?? '0')); ?>
+                <li><a href="<?= e(url('admin/contract.php?id=' . $cn['id'])) ?>"><strong><?= e($cn['number']) ?></strong></a> ·
+                  <?= te('adm.inq.price') ?> <strong><?= e(number_format($gross, 0, ',', ' ')) ?> Kč</strong> <span class="muted"><?= te('adm.inq.incl_vat') ?></span>
+                  · <?= te('adm.inq.deposit') ?> <strong><?= $dep > 0 ? e(number_format($dep, 0, ',', ' ')) . ' Kč' : '—' ?></strong></li>
+              <?php endforeach; ?>
+              <?php foreach ($invs as $iv): $over = !$iv['paid_at'] && $iv['due'] < date('Y-m-d'); ?>
+                <li><a href="<?= e(url('admin/invoice.php?id=' . $iv['id'])) ?>"><strong><?= e($iv['number']) ?></strong></a>
+                  <?= str_contains((string) $iv['data'], '"kind":"deposit"') ? '<span class="badge">' . te('adm.invoice.kind_deposit_short') . '</span>' : '' ?> ·
+                  <strong><?= e(number_format((float) $iv['total'], 0, ',', ' ')) ?> Kč</strong> ·
+                  <?= $iv['paid_at'] ? '<span class="badge">' . te('adm.invoice.paid_badge') . '</span>'
+                      : '<span' . ($over ? ' class="deal__over"' : ' class="muted"') . '>' . te('adm.inq.due_on', ['date' => date('j. n. Y', strtotime((string) $iv['due']))]) . '</span>' ?></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
           <?php if ($data): ?>
             <dl class="kv">
               <?php foreach ($data as $k => $d): if (in_array($k, ['name', 'email', 'phone'], true) || ($d['value'] ?? '') === '') continue; ?>
@@ -376,6 +403,7 @@ $tabs = [
           </details>
           <div class="item__actions">
             <a href="<?= e(url('admin/contract.php?inquiry=' . (int) $r['id'])) ?>" class="btn btn--small"><?= te('adm.inq.contract') ?></a>
+            <a href="<?= e(url('admin/invoice.php?' . ($deals ? 'contract=' . (int) $deals[0]['id'] : 'inquiry=' . (int) $r['id']))) ?>" class="btn btn--small"><?= te('adm.inq.invoice') ?></a>
             <?= btn_post('inquiry_read', (int) $r['id'], t($r['is_read'] ? 'adm.inq.mark_new' : 'adm.inq.mark_read')) ?>
             <?= btn_post('inquiry_delete', (int) $r['id'], t('adm.delete'), 'btn btn--small btn--danger', t('adm.confirm_delete')) ?>
           </div>
@@ -623,9 +651,9 @@ $tabs = [
     <?php /* ================= TEXTY CZ/EN ================= */ elseif ($tab === 'texts'): ?>
       <?php
         $groups = [];
-        foreach (['nav', 'home', 'cta', 'category', 'references', 'reviews', 'pricing', 'contact', 'privacy', 'contract', 'form', 'acc', 'status', 'mail', 'misc', 'adm'] as $g) $groups[$g] = t('adm.grp.' . $g);
+        foreach (['nav', 'home', 'cta', 'category', 'references', 'reviews', 'pricing', 'contact', 'privacy', 'contract', 'form', 'acc', 'status', 'mail', 'consent', 'misc'] as $g) $groups[$g] = t('adm.grp.' . $g);
         $all = props();
-        foreach ($all as $r) if (!isset($groups[$r['grp']]) && !in_array($r['grp'], ['site', 'images', 'seo', 'sys'], true)) $groups[$r['grp']] = $r['grp'];
+        foreach ($all as $r) if (!isset($groups[$r['grp']]) && !in_array($r['grp'], ['site', 'images', 'seo', 'sys', 'adm', 'ga', 'inv'], true)) $groups[$r['grp']] = $r['grp'];
         $grp = (string) ($_GET['grp'] ?? 'home');
         if (!isset($groups[$grp])) $grp = 'home';
       ?>
@@ -665,42 +693,96 @@ $tabs = [
 
     <?php /* ================= NASTAVENÍ ================= */ elseif ($tab === 'settings'): ?>
       <?php
+        $sgroups = ['site' => t('adm.sgrp.site'), 'images' => t('adm.sgrp.images'), 'seo' => t('adm.sgrp.seo'),
+                    'robots' => t('adm.sgrp.robots'), 'ga' => t('adm.sgrp.ga'), 'inv' => t('adm.sgrp.inv')];
         $grp = (string) ($_GET['grp'] ?? 'site');
-        $sgroups = ['site' => t('adm.sgrp.site'), 'images' => t('adm.sgrp.images'), 'seo' => t('adm.sgrp.seo')];
         if (!isset($sgroups[$grp])) $grp = 'site';
         $all = props();
+        // rozložení záložek: sekce => klíče vlastností (nezařazené klíče skupiny se ukážou v „Ostatní“)
+        $layout = [
+            'site'   => ['adm.sec.company'  => ['site.name', 'site.tagline', 'site.owner', 'site.ico', 'site.dic', 'site.address', 'site.years'],
+                         'adm.sec.contacts' => ['site.phone', 'site.email', 'site.whatsapp', 'site.hours'],
+                         'adm.sec.social'   => ['site.facebook', 'site.instagram', 'site.fb_feed'],
+                         'adm.sec.web'      => ['site.domain', 'site.geo', 'site.gdpr_url', 'site.accounts', 'site.email_protect']],
+            'images' => ['adm.sec.images'   => array_keys(array_filter($all, fn($r) => $r['grp'] === 'images'))],
+            'seo'    => ['adm.sec.seo'      => ['seo.indexing', 'seo.jsonld', 'seo.microdata', 'seo.rdfa']],
+            'robots' => ['adm.sec.robots'   => ['seo.robots_extra', 'seo.sitemap_auto']],
+            'ga'     => ['adm.sec.ga'       => ['ga.enabled', 'ga.id']],
+            'inv'    => ['adm.sec.inv_bank' => ['site.bank', 'inv.iban'],
+                         'adm.sec.inv_tax'  => ['inv.vat_payer', 'site.dic', 'inv.vat_rate', 'inv.registry'],
+                         'adm.sec.inv_doc'  => ['inv.format', 'inv.due', 'inv.note']],
+        ];
+        $listed = [];
+        foreach ($layout as $secs) foreach ($secs as $keys) $listed = array_merge($listed, $keys);
+        $sections = $layout[$grp];
+        $prefix = ['site' => 'site.', 'seo' => 'seo.', 'ga' => 'ga.', 'inv' => 'inv.'][$grp] ?? null;
+        if ($prefix) {
+            $rest = array_values(array_filter(array_keys($all), fn($k) => str_starts_with($k, $prefix) && !in_array($k, $listed, true)));
+            if ($rest) $sections['adm.sec.other'] = $rest;
+        }
+        $bilingual = ['site.name', 'site.tagline', 'site.hours'];
+        $inputType = ['site.email' => 'email', 'site.phone' => 'tel', 'site.whatsapp' => 'tel', 'site.facebook' => 'url', 'site.instagram' => 'url',
+                      'site.gdpr_url' => 'url', 'site.domain' => 'url', 'site.years' => 'number', 'inv.due' => 'number', 'inv.vat_rate' => 'number'];
+        $placeholder = ['ga.id' => 'G-XXXXXXXXXX', 'site.domain' => 'https://www.betonovesterky-brno.cz', 'site.bank' => '123456789/0800', 'inv.format' => 'RRRR###'];
+        // „Popisek (nápověda)“ → popisek + nápověda pod polem
+        $split = function (array $r, string $key): array {
+            $l = (string) ($r['label'] ?: $key);
+            return preg_match('~^(.*?)\s*\((.+)\)$~u', $l, $m) ? [$m[1], $m[2]] : [$l, ''];
+        };
+        $field = function (string $key) use ($all, $bilingual, $inputType, $placeholder, $split): string {
+            $r = $all[$key] ?? null;
+            if (!$r) return '';
+            [$label, $hint] = $split($r, $key);
+            $n = 'p[' . e($key) . ']';
+            $hintH = $hint !== '' ? '<small class="hint">' . e($hint) . '</small>' : '';
+            switch ($r['type']) {
+                case 'image':
+                    $src = image_url($r['value_cs']);
+                    return '<div class="img-prop field--wide"><div class="img-prop__preview">' . ($src ? '<img src="' . e($src) . '" alt="">' : '<span class="muted">' . te('adm.settings.no_image') . '</span>') . '</div>'
+                         . '<div><strong>' . e($label) . '</strong>' . $hintH . '<input type="file" name="img[' . e($key) . ']" accept="image/*,.ico">'
+                         . ($src ? '<label class="check"><input type="checkbox" name="img_remove[' . e($key) . ']" value="1"><span>' . te('adm.settings.remove') . '</span></label>' : '') . '</div></div>';
+                case 'bool':
+                    return '<input type="hidden" name="bools[]" value="' . e($key) . '"><label class="check field--wide"><input type="checkbox" name="' . $n . '[cs]" value="1"' . ($r['value_cs'] === '1' ? ' checked' : '') . '>'
+                         . '<span>' . e($label) . ($hint !== '' ? ' <span class="muted">(' . e($hint) . ')</span>' : '') . '</span></label>';
+                case 'text':
+                case 'html':
+                    return '<label class="field field--wide"><span class="field__label">' . e($label) . '</span>' . $hintH
+                         . '<textarea name="' . $n . '[cs]" rows="4"' . ($key === 'seo.robots_extra' ? ' class="code"' : '') . '>' . e($r['value_cs']) . '</textarea></label>';
+            }
+            $type = $inputType[$key] ?? 'text';
+            $ph = isset($placeholder[$key]) ? ' placeholder="' . e($placeholder[$key]) . '"' : '';
+            if (in_array($key, $bilingual, true)) {
+                return '<div class="bi field--wide"><div class="bi__label">' . e($label) . $hintH . '</div>'
+                     . '<label><span class="flag">CZ</span><input type="' . $type . '" name="' . $n . '[cs]" value="' . e($r['value_cs']) . '"' . $ph . '></label>'
+                     . '<label><span class="flag">EN</span><input type="' . $type . '" name="' . $n . '[en]" value="' . e($r['value_en']) . '" placeholder="' . te('adm.settings.same_as_cz') . '"></label></div>';
+            }
+            return '<label class="field"><span class="field__label">' . e($label) . '</span>'
+                 . '<input type="' . $type . '" name="' . $n . '[cs]" value="' . e($r['value_cs']) . '"' . $ph . ($type === 'number' ? ' min="0"' : '') . '>' . $hintH . '</label>';
+        };
       ?>
       <h1><?= te('adm.tab.settings') ?></h1>
       <nav class="subtabs"><?php foreach ($sgroups as $k => $v): ?><a href="<?= e(admin_url("tab=settings&grp=$k")) ?>" class="<?= $grp === $k ? 'is-active' : '' ?>"><?= e($v) ?></a><?php endforeach; ?></nav>
 
-      <form method="post" class="form panel" enctype="multipart/form-data">
-        <?= csrf_field() ?><input type="hidden" name="action" value="props_save"><input type="hidden" name="grp" value="<?= e($grp) ?>"><input type="hidden" name="grp_prefix" value="<?= e($grp) ?>.">
-        <?php foreach ($all as $key => $r): if ($r['grp'] !== $grp) continue; ?>
-          <?php if ($r['type'] === 'image'): $src = image_url($r['value_cs']); ?>
-            <div class="img-prop">
-              <div class="img-prop__preview"><?= $src ? '<img src="' . e($src) . '" alt="">' : '<span class="muted">' . te('adm.settings.no_image') . '</span>' ?></div>
-              <div>
-                <strong><?= e($r['label'] ?: $key) ?></strong>
-                <input type="file" name="img[<?= e($key) ?>]" accept="image/*,.ico">
-                <?php if ($src): ?><label class="check"><input type="checkbox" name="img_remove[<?= e($key) ?>]" value="1"><span><?= te('adm.settings.remove') ?></span></label><?php endif; ?>
-              </div>
-            </div>
-          <?php elseif ($r['type'] === 'bool'): ?>
-            <label class="check"><input type="checkbox" name="p[<?= e($key) ?>][cs]" value="1" <?= $r['value_cs'] === '1' ? 'checked' : '' ?>><span><?= e($r['label'] ?: $key) ?></span></label>
-          <?php elseif ($grp === 'seo'): ?>
-            <label><?= e($r['label'] ?: $key) ?><textarea name="p[<?= e($key) ?>][cs]" rows="4" class="code"><?= e($r['value_cs']) ?></textarea></label>
-          <?php else: ?>
-            <div class="bi">
-              <div class="bi__label"><?= e($r['label'] ?: $key) ?></div>
-              <label><span class="flag">CZ</span><input type="text" name="p[<?= e($key) ?>][cs]" value="<?= e($r['value_cs']) ?>"></label>
-              <label><span class="flag">EN</span><input type="text" name="p[<?= e($key) ?>][en]" value="<?= e($r['value_en']) ?>" placeholder="<?= te('adm.settings.same_as_cz') ?>"></label>
-            </div>
-          <?php endif; ?>
+      <?php if ($grp === 'ga'): $gaId = trim((string) ($all['ga.id']['value_cs'] ?? '')); ?>
+        <div class="alert alert--info settings-note"><?= t('adm.ga.info') /* HTML */ ?></div>
+        <?php if (prop_bool('ga.enabled') && !preg_match('~^G-[A-Z0-9]{4,}$~', $gaId)): ?><div class="alert alert--err settings-note"><?= te('adm.ga.err_id') ?></div><?php endif; ?>
+      <?php endif; ?>
+      <?php if ($grp === 'inv'): $iban = invoice_iban(); ?>
+        <div class="alert <?= $iban ? 'alert--ok' : 'alert--err' ?> settings-note"><?= $iban ? te('adm.inv.iban_ok', ['iban' => iban_format($iban)]) : te('adm.inv.iban_missing') ?></div>
+      <?php endif; ?>
+
+      <form method="post" class="form panel settings" enctype="multipart/form-data">
+        <?= csrf_field() ?><input type="hidden" name="action" value="props_save"><input type="hidden" name="grp" value="<?= e($grp) ?>">
+        <?php foreach ($sections as $secKey => $keys): $html = implode('', array_map($field, $keys)); if ($html === '') continue; ?>
+          <fieldset class="settings-sec">
+            <legend><?= te($secKey) ?></legend>
+            <div class="form__grid"><?= $html ?></div>
+          </fieldset>
         <?php endforeach; ?>
         <button class="btn"><?= te('adm.save') ?></button>
       </form>
 
-      <?php if ($grp === 'seo'): $hasFiles = is_file(ROOT_DIR . '/robots.txt') || is_file(ROOT_DIR . '/sitemap.xml'); ?>
+      <?php if ($grp === 'robots'): $hasFiles = is_file(ROOT_DIR . '/robots.txt') || is_file(ROOT_DIR . '/sitemap.xml'); ?>
         <div class="panel">
           <h2><?= te('adm.seo.title') ?></h2>
           <p><?= te('adm.seo.state') ?> <?= $hasFiles
