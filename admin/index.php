@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/admin-nav.php';
+require_once __DIR__ . '/../includes/admin-calendar.php';
 
 function admin_url(string $q = ''): string { return url('admin/') . ($q !== '' ? '?' . $q : ''); }
 function back(string $q = '', ?string $msg = null): never
@@ -317,12 +318,20 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
         $rows = q("SELECT i.*, c.name AS c_name, c.id AS c_id FROM inquiries i LEFT JOIN customers c ON c.id = i.customer_id"
                 . ($sf ? " WHERE i.status = ?" : '') . " ORDER BY i.is_read, COALESCE(i.updated_at, i.created_at) DESC LIMIT 300", $sf ? [$sf] : [])->fetchAll();
         $stLabels = []; foreach (INQUIRY_STATUSES as $st) $stLabels[$st] = t('adm.status.' . $st);
+        $view = ($_GET['view'] ?? '') === 'calendar' ? 'calendar' : 'list';
+        $vq   = $view === 'calendar' ? '&view=calendar' : '';
       ?>
       <nav class="subtabs">
-        <a href="<?= e(admin_url('tab=inquiries')) ?>" class="<?= $sf === '' ? 'is-active' : '' ?>"><?= te('adm.inq.all') ?></a>
-        <?php foreach ($stLabels as $k => $v): ?><a href="<?= e(admin_url("tab=inquiries&status=$k")) ?>" class="<?= $sf === $k ? 'is-active' : '' ?>"><?= e($v) ?></a><?php endforeach; ?>
+        <a href="<?= e(admin_url('tab=inquiries' . $vq)) ?>" class="<?= $sf === '' ? 'is-active' : '' ?>"><?= te('adm.inq.all') ?></a>
+        <?php foreach ($stLabels as $k => $v): ?><a href="<?= e(admin_url("tab=inquiries&status=$k" . $vq)) ?>" class="<?= $sf === $k ? 'is-active' : '' ?>"><?= e($v) ?></a><?php endforeach; ?>
       </nav>
-      <?php if (!$rows): ?><p class="muted"><?= te('adm.inq.empty') ?></p><?php endif; ?>
+      <nav class="view-switch" aria-label="<?= te('adm.inq.view') ?>">
+        <a href="<?= e(admin_url('tab=inquiries' . ($sf ? "&status=$sf" : ''))) ?>"<?= $view === 'list' ? ' class="is-active" aria-current="page"' : '' ?>><?= te('adm.inq.view_list') ?></a>
+        <a href="<?= e(admin_url('tab=inquiries&view=calendar' . ($sf ? "&status=$sf" : ''))) ?>"<?= $view === 'calendar' ? ' class="is-active" aria-current="page"' : '' ?>><?= te('adm.inq.view_cal') ?></a>
+      </nav>
+      <?php if ($view === 'calendar'): ?>
+        <?= inquiry_calendar($rows, (string) ($_GET['m'] ?? ''), $sf) ?>
+      <?php $rows = []; elseif (!$rows): ?><p class="muted"><?= te('adm.inq.empty') ?></p><?php endif; ?>
       <?php foreach ($rows as $r): $data = json_decode((string) $r['data'], true) ?: [];
             $msgs = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$r['id']])->fetchAll();
             // cena a záloha ze smluv, faktury k poptávce

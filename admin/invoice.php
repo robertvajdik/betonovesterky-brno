@@ -145,7 +145,6 @@ if (isset($_GET['list'])):
 <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset('css/admin.css')) ?>">
 </head><body class="admin">
 <?= admin_menu('invoices') ?><main class="container admin-main">
-  <p><a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.invoice.back') ?></a></p>
   <h1><?= te('adm.invoice.list_title') ?></h1>
   <?php if (!$rows): ?><p class="muted"><?= te('adm.invoice.list_empty') ?></p><?php else: ?>
   <div class="table-wrap"><table class="table">

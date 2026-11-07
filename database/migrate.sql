@@ -624,3 +624,17 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('seo.keywords', 'seo', 'line', 'Klíčová slova (oddělená čárkou; Google je pro řazení nepoužívá, ostatní vyhledávače jen okrajově)', 'betonová stěrka Brno, betonové stěrky, dekorativní omítky, malířské práce, stěrka do koupelny, stěrka do kuchyně, stěrka na podlahu', 'concrete finish Brno, microcement, decorative plaster, painting, bathroom microcement, kitchen microcement', 2),
 ('seo.og_image', 'seo', 'image', 'Obrázek pro sdílení (Facebook, WhatsApp, X; ideálně 1200 × 630 px – použije se, když stránka nemá vlastní fotku)', '', '', 3),
 ('adm.sec.meta', 'adm', 'line', NULL, 'Klíčová slova a sdílení', '', 800);
+
+-- v17: kalendář poptávek
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.cal.empty', 'adm', 'line', NULL, 'V tomto měsíci nejsou žádné termíny.', '', 900),
+('adm.cal.legend_contract', 'adm', 'line', NULL, 'Termín ze smlouvy', '', 901),
+('adm.cal.legend_wish', 'adm', 'line', NULL, 'Termín, který si zákazník přeje', '', 902),
+('adm.cal.months', 'adm', 'line', NULL, 'Leden, Únor, Březen, Duben, Květen, Červen, Červenec, Srpen, Září, Říjen, Listopad, Prosinec', '', 903),
+('adm.cal.next', 'adm', 'line', NULL, 'Další měsíc', '', 904),
+('adm.cal.prev', 'adm', 'line', NULL, 'Předchozí měsíc', '', 905),
+('adm.cal.today', 'adm', 'line', NULL, 'Dnes', '', 906),
+('adm.cal.weekdays', 'adm', 'line', NULL, 'Po, Út, St, Čt, Pá, So, Ne', '', 907),
+('adm.inq.view', 'adm', 'line', NULL, 'Zobrazení', '', 908),
+('adm.inq.view_cal', 'adm', 'line', NULL, 'Kalendář', '', 909),
+('adm.inq.view_list', 'adm', 'line', NULL, 'Seznam', '', 910);
