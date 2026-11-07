@@ -311,7 +311,7 @@ INSERT INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 
 -- Hodnocení
 ('reviews.title',      'reviews', 'line', NULL, 'Hodnocení zákazníků', 'Customer reviews', 1),
-('reviews.meta_desc',  'reviews', 'text', NULL, 'Zkušenosti a hodnocení zákazníků.', 'Customer experiences and reviews.', 2),
+('reviews.meta_desc',  'reviews', 'text', NULL, 'Hodnocení zákazníků Tomáše Rückera – betonové stěrky, dekorativní omítky a malířské práce v Brně a okolí. Přečtěte si zkušenosti z realizací.', 'Customer reviews of Tomáš Rücker – concrete finishes, decorative plasters and painting in Brno and the surrounding area. Read about real projects.', 2),
 ('reviews.summary',    'reviews', 'line', NULL, '{avg} z 5 · {count} hodnocení', '{avg} out of 5 · {count} reviews', 3),
 ('reviews.empty',      'reviews', 'text', NULL, 'Zatím zde nejsou žádná hodnocení. Budeme rádi, když se podělíte o svou zkušenost jako první.', 'There are no reviews yet. We would be glad if you shared your experience first.', 4),
 ('reviews.form_title', 'reviews', 'line', NULL, 'Napište nám hodnocení', 'Write a review', 5),
@@ -349,7 +349,7 @@ INSERT INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 
 -- Kontakt
 ('contact.title',      'contact', 'line', NULL, 'Kontakt', 'Contact', 1),
-('contact.meta_desc',  'contact', 'text', NULL, 'Kontaktujte nás pro nezávaznou konzultaci a zaměření zdarma.', 'Contact us for a free consultation and measuring.', 2),
+('contact.meta_desc',  'contact', 'text', NULL, 'Kontakt na Tomáše Rückera – betonové stěrky a dekorativní omítky v Brně. Zavolejte nebo pošlete poptávku, zaměření a vzorky přivezeme zdarma.', 'Contact Tomáš Rücker – concrete finishes and decorative plasters in Brno. Call or send an enquiry; we measure and bring samples free of charge.', 2),
 ('contact.lead',       'contact', 'text', NULL, 'Zavolejte nebo napište. Domluvíme si schůzku, přivezeme vzorky a zaměříme prostor – zdarma.', 'Call or write. We will arrange a visit, bring samples and measure the space – free of charge.', 3),
 ('contact.phone',      'contact', 'line', NULL, 'Telefon', 'Phone', 4),
 ('contact.email',      'contact', 'line', NULL, 'E-mail', 'Email', 5),
@@ -988,3 +988,7 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.invoice.x_taxable', 'adm', 'line', NULL, 'DUZP', '', 1122),
 ('adm.invoice.x_total', 'adm', 'line', NULL, 'Celkem s DPH', '', 1123),
 ('adm.invoice.x_vat', 'adm', 'line', NULL, 'DPH', '', 1124);
+
+-- v23: SEO titulek úvodní stránky
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('seo.home_title', 'seo', 'line', 'Titulek úvodní stránky ve vyhledávání (ideálně do 60 znaků; prázdné = název – podtitul)', 'Betonové stěrky Brno – stěrky, omítky a malování', 'Concrete finishes Brno – microcement, plaster, painting', 1);

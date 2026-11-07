@@ -808,7 +808,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
                          'adm.sec.social'   => ['site.facebook', 'site.instagram', 'site.fb_feed'],
                          'adm.sec.web'      => ['site.domain', 'site.geo', 'site.gdpr_url', 'site.accounts', 'site.email_protect']],
             'images' => ['adm.sec.images'   => array_keys(array_filter($all, fn($r) => $r['grp'] === 'images'))],
-            'seo'    => ['adm.sec.meta'     => ['seo.keywords', 'seo.og_image'],
+            'seo'    => ['adm.sec.meta'     => ['seo.home_title', 'seo.keywords', 'seo.og_image'],
                          'adm.sec.seo'      => ['seo.indexing', 'seo.jsonld', 'seo.microdata', 'seo.rdfa']],
             'robots' => ['adm.sec.robots'   => ['seo.robots_extra', 'seo.sitemap_auto']],
             'ga'     => ['adm.sec.ga'       => ['ga.enabled', 'ga.id']],
@@ -824,7 +824,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
             $rest = array_values(array_filter(array_keys($all), fn($k) => str_starts_with($k, $prefix) && !in_array($k, $listed, true)));
             if ($rest) $sections['adm.sec.other'] = $rest;
         }
-        $bilingual = ['site.name', 'site.tagline', 'site.hours', 'seo.keywords'];
+        $bilingual = ['site.name', 'site.tagline', 'site.hours', 'seo.keywords', 'seo.home_title'];
         $inputType = ['site.email' => 'email', 'site.phone' => 'tel', 'site.whatsapp' => 'tel', 'site.facebook' => 'url', 'site.instagram' => 'url',
                       'site.gdpr_url' => 'url', 'site.domain' => 'url', 'site.years' => 'number', 'inv.due' => 'number', 'inv.vat_rate' => 'number'];
         $placeholder = ['ga.id' => 'G-XXXXXXXXXX', 'site.domain' => 'https://www.betonovesterky-brno.cz', 'site.bank' => '123456789/0800', 'inv.format' => 'RRRR###'];

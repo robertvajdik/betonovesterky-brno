@@ -720,3 +720,11 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.invoice.x_taxable', 'adm', 'line', NULL, 'DUZP', '', 1122),
 ('adm.invoice.x_total', 'adm', 'line', NULL, 'Celkem s DPH', '', 1123),
 ('adm.invoice.x_vat', 'adm', 'line', NULL, 'DPH', '', 1124);
+
+-- v23: SEO – titulek úvodní stránky, delší popisy (jen pokud se texty neměnily)
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('seo.home_title', 'seo', 'line', 'Titulek úvodní stránky ve vyhledávání (ideálně do 60 znaků; prázdné = název – podtitul)', 'Betonové stěrky Brno – stěrky, omítky a malování', 'Concrete finishes Brno – microcement, plaster, painting', 1);
+UPDATE properties SET value_cs = 'Hodnocení zákazníků Tomáše Rückera – betonové stěrky, dekorativní omítky a malířské práce v Brně a okolí. Přečtěte si zkušenosti z realizací.' WHERE pkey = 'reviews.meta_desc' AND value_cs = 'Zkušenosti a hodnocení zákazníků.';
+UPDATE properties SET value_en = 'Customer reviews of Tomáš Rücker – concrete finishes, decorative plasters and painting in Brno and the surrounding area. Read about real projects.' WHERE pkey = 'reviews.meta_desc' AND value_en = 'Customer experiences and reviews.';
+UPDATE properties SET value_cs = 'Kontakt na Tomáše Rückera – betonové stěrky a dekorativní omítky v Brně. Zavolejte nebo pošlete poptávku, zaměření a vzorky přivezeme zdarma.' WHERE pkey = 'contact.meta_desc' AND value_cs = 'Kontaktujte nás pro nezávaznou konzultaci a zaměření zdarma.';
+UPDATE properties SET value_en = 'Contact Tomáš Rücker – concrete finishes and decorative plasters in Brno. Call or send an enquiry; we measure and bring samples free of charge.' WHERE pkey = 'contact.meta_desc' AND value_en = 'Contact us for a free consultation and measuring.';
