@@ -997,3 +997,12 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 ('adm.inq.link_no_email', 'adm', 'line', NULL, 'Poptávka nemá platný e-mail zákazníka – odkaz nelze poslat.', '', 1200),
 ('adm.inq.link_sent_to', 'adm', 'line', NULL, 'Odkaz na poptávku byl odeslán na {email}.', '', 1201);
+
+-- v26: HTML e-maily – tlačítka
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('mail.btn_track', 'mail', 'line', NULL, 'Zobrazit poptávku', 'View your enquiry', 40),
+('mail.btn_invoice', 'mail', 'line', NULL, 'Zobrazit fakturu', 'View invoice', 41),
+('mail.btn_verify', 'mail', 'line', NULL, 'Potvrdit e-mail', 'Confirm email', 42),
+('mail.btn_reset', 'mail', 'line', NULL, 'Nastavit nové heslo', 'Set a new password', 43),
+('mail.btn_open', 'mail', 'line', NULL, 'Otevřít', 'Open', 44),
+('mail.link_hint', 'mail', 'line', NULL, 'Pokud tlačítko nefunguje, zkopírujte do prohlížeče tento odkaz:', 'If the button does not work, copy this link into your browser:', 45);

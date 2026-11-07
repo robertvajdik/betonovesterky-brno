@@ -152,35 +152,35 @@ function status_label(string $s): string
 // E-maily
 // ---------------------------------------------------------------
 
-function send_mail(string $to, string $subject, string $body, ?string $replyTo = null): bool
+function send_mail(string $to, string $subject, string $body, ?string $replyTo = null, ?string $html = null): bool
 {
     global $CONFIG;
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
     $from = (string) ($CONFIG['mail_from'] ?? '') ?: site('email');
     $name = '=?UTF-8?B?' . base64_encode(site('name')) . '?=';
-    $headers = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n";
-    if (filter_var($from, FILTER_VALIDATE_EMAIL)) $headers .= "From: {$name} <{$from}>\r\n";
-    if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers .= "Reply-To: {$replyTo}\r\n";
+    $reply = $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null;
+    [$ctype, $content] = mail_mime_body($body, $html);       // text, případně text + HTML (includes/mailer.php)
+    $mime = "MIME-Version: 1.0\r\n" . implode("\r\n", $ctype) . "\r\n" . ($reply ? "Reply-To: {$reply}\r\n" : '');
+    $subj = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     if (smtp_on()) {                                       // SMTP z config.php (includes/mailer.php)
         // odesílatel musí patřit k SMTP účtu (server jinak e-mail odmítne): smtp.from → přihlašovací jméno účtu → e-mail firmy
         $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL)
                ?: (filter_var((string) ($CONFIG['smtp']['user'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from);
-        if (smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null)) return true;
+        if (smtp_send($to, $subject, $body, $sender, site('name'), $reply, $html)) return true;
         // SMTP server nedostupný (hosting blokuje port apod.) → záložně přes PHP mail(), ať se e-mail neztratí.
         // Při jiné chybě (špatné heslo, odmítnutý odesílatel) se záloha nepoužije – chybu je potřeba opravit.
         if (!str_starts_with(smtp_error(), 'připojení k')) return false;
         $log = smtp_log();
         // i záloha odesílá ze schránky SMTP účtu (existující doména) – hlavička From i obálka (-f), jinak Gmail e-mail zahodí
-        $fbHeaders = str_replace("From: {$name} <{$from}>\r\n", '', $headers) . "From: {$name} <{$sender}>\r\n";
         $params = preg_match('~^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$~', $sender) ? '-f' . $sender : '';
-        $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $fbHeaders, $params);
+        $ok = @mail($to, $subj, $content, $mime . "From: {$name} <{$sender}>\r\n", $params);
         smtp_log(null, true);
         foreach ($log as $line) smtp_log(substr($line, 10));
         smtp_log('záloha: PHP mail() z ' . $sender . ' → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal'));
         return $ok;
     }
     smtp_log(null, true);
-    $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
+    $ok = @mail($to, $subj, $content, $mime . (filter_var($from, FILTER_VALIDATE_EMAIL) ? "From: {$name} <{$from}>\r\n" : ''));
     smtp_log('PHP mail() → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal (nastavte SMTP v config.php)'));
     return $ok;
 }
@@ -193,7 +193,9 @@ function send_customer_mail(string $to, string $lang, string $key, array $vars):
     $vars += ['site' => site('name')];
     // texty e-mailů: doslovné „\n“ (starší import do DB) převést na skutečné konce řádků
     $nl = fn(string $s) => str_replace(['\r\n', '\n'], "\n", $s);
-    $ok = send_mail($to, trim(str_replace('\n', ' ', t("mail.{$key}_subject", $vars))), $nl(t("mail.{$key}_body", $vars)), $GLOBALS['CONFIG']['notify_email'] ?? null);
+    $subject = trim(str_replace('\n', ' ', t("mail.{$key}_subject", $vars)));
+    $body    = $nl(t("mail.{$key}_body", $vars));
+    $ok = send_mail($to, $subject, $body, $GLOBALS['CONFIG']['notify_email'] ?? null, mail_html($body, $subject, mail_button_label($key)));
     lang($prev);
     return $ok;
 }

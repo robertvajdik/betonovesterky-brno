@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 25;
+const DB_VERSION = 26;
 
 function db_migrate(): void
 {

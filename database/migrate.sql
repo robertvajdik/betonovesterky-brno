@@ -736,3 +736,12 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 
 -- v25: e-maily – doslovné \n z dřívější verze převést na konce řádků
 UPDATE properties SET value_cs = REPLACE(value_cs, '\\n', '\n'), value_en = REPLACE(value_en, '\\n', '\n') WHERE (pkey LIKE 'mail.%' OR pkey = 'adm.mail.test_body') AND (value_cs LIKE '%\\\\n%' OR value_en LIKE '%\\\\n%');
+
+-- v26: HTML e-maily – tlačítka
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('mail.btn_track', 'mail', 'line', NULL, 'Zobrazit poptávku', 'View your enquiry', 40),
+('mail.btn_invoice', 'mail', 'line', NULL, 'Zobrazit fakturu', 'View invoice', 41),
+('mail.btn_verify', 'mail', 'line', NULL, 'Potvrdit e-mail', 'Confirm email', 42),
+('mail.btn_reset', 'mail', 'line', NULL, 'Nastavit nové heslo', 'Set a new password', 43),
+('mail.btn_open', 'mail', 'line', NULL, 'Otevřít', 'Open', 44),
+('mail.link_hint', 'mail', 'line', NULL, 'Pokud tlačítko nefunguje, zkopírujte do prohlížeče tento odkaz:', 'If the button does not work, copy this link into your browser:', 45);

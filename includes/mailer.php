@@ -33,7 +33,23 @@ function smtp_error(?string $set = null): string
  * Odešle textový e-mail přes SMTP. true = server zprávu převzal.
  * $cfg: host, port, secure ('tls' = STARTTLS, 'ssl' = SMTPS, '' = bez šifrování), user, pass
  */
-function smtp_send(string $to, string $subject, string $body, string $from, string $fromName = '', ?string $replyTo = null): bool
+/**
+ * MIME tělo e-mailu: [hlavičky Content-Type…, obsah]. S HTML jako multipart/alternative (text + HTML), jinak jen text.
+ */
+function mail_mime_body(string $text, ?string $html = null): array
+{
+    $b64 = fn(string $s) => rtrim(chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $s)), 76, "\r\n"));
+    if ($html === null || $html === '') {
+        return [['Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64'], $b64($text)];
+    }
+    $b = '=_bs_' . bin2hex(random_bytes(10));
+    $content = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $b64($text) . "\r\n"
+             . "--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $b64($html) . "\r\n"
+             . "--$b--";
+    return [['Content-Type: multipart/alternative; boundary="' . $b . '"'], $content];
+}
+
+function smtp_send(string $to, string $subject, string $body, string $from, string $fromName = '', ?string $replyTo = null, ?string $html = null): bool
 {
     global $CONFIG;
     $c = (array) $CONFIG['smtp'];
@@ -98,12 +114,11 @@ function smtp_send(string $to, string $subject, string $body, string $from, stri
             'Subject: ' . $enc($subject),
             'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $domain . '>',
             'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'Content-Transfer-Encoding: base64',
         ];
         if ($replyTo) $headers[] = 'Reply-To: <' . $replyTo . '>';
-        // base64 tělo = žádné problémy s tečkou na začátku řádku ani s délkou řádků
-        $msg = implode("\r\n", $headers) . "\r\n\r\n" . rtrim(chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $body)), 76, "\r\n"));
+        // tělo: text, nebo text + HTML (multipart/alternative); base64 = žádné problémy s tečkou na začátku řádku ani s délkou řádků
+        [$ctype, $content] = mail_mime_body($body, $html);
+        $msg = implode("\r\n", array_merge($headers, $ctype)) . "\r\n\r\n" . $content;
         if ($e = $cmd($msg . "\r\n.", [250])) throw new RuntimeException($e);
         $cmd('QUIT', [221]);
         fclose($fp);
