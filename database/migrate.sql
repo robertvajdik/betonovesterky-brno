@@ -728,3 +728,8 @@ UPDATE properties SET value_cs = 'Hodnocení zákazníků Tomáše Rückera – 
 UPDATE properties SET value_en = 'Customer reviews of Tomáš Rücker – concrete finishes, decorative plasters and painting in Brno and the surrounding area. Read about real projects.' WHERE pkey = 'reviews.meta_desc' AND value_en = 'Customer experiences and reviews.';
 UPDATE properties SET value_cs = 'Kontakt na Tomáše Rückera – betonové stěrky a dekorativní omítky v Brně. Zavolejte nebo pošlete poptávku, zaměření a vzorky přivezeme zdarma.' WHERE pkey = 'contact.meta_desc' AND value_cs = 'Kontaktujte nás pro nezávaznou konzultaci a zaměření zdarma.';
 UPDATE properties SET value_en = 'Contact Tomáš Rücker – concrete finishes and decorative plasters in Brno. Call or send an enquiry; we measure and bring samples free of charge.' WHERE pkey = 'contact.meta_desc' AND value_en = 'Contact us for a free consultation and measuring.';
+
+-- v24: hlášky odeslání odkazu zákazníkovi
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.inq.link_no_email', 'adm', 'line', NULL, 'Poptávka nemá platný e-mail zákazníka – odkaz nelze poslat.', '', 1200),
+('adm.inq.link_sent_to', 'adm', 'line', NULL, 'Odkaz na poptávku byl odeslán na {email}.', '', 1201);

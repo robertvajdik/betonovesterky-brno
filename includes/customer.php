@@ -162,16 +162,21 @@ function send_mail(string $to, string $subject, string $body, ?string $replyTo =
     if (filter_var($from, FILTER_VALIDATE_EMAIL)) $headers .= "From: {$name} <{$from}>\r\n";
     if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers .= "Reply-To: {$replyTo}\r\n";
     if (smtp_on()) {                                       // SMTP z config.php (includes/mailer.php)
-        $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from;
+        // odesílatel musí patřit k SMTP účtu (server jinak e-mail odmítne): smtp.from → přihlašovací jméno účtu → e-mail firmy
+        $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL)
+               ?: (filter_var((string) ($CONFIG['smtp']['user'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from);
         if (smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null)) return true;
         // SMTP server nedostupný (hosting blokuje port apod.) → záložně přes PHP mail(), ať se e-mail neztratí.
         // Při jiné chybě (špatné heslo, odmítnutý odesílatel) se záloha nepoužije – chybu je potřeba opravit.
         if (!str_starts_with(smtp_error(), 'připojení k')) return false;
         $log = smtp_log();
-        $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
+        // i záloha odesílá ze schránky SMTP účtu (existující doména) – hlavička From i obálka (-f), jinak Gmail e-mail zahodí
+        $fbHeaders = str_replace("From: {$name} <{$from}>\r\n", '', $headers) . "From: {$name} <{$sender}>\r\n";
+        $params = preg_match('~^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$~', $sender) ? '-f' . $sender : '';
+        $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $fbHeaders, $params);
         smtp_log(null, true);
         foreach ($log as $line) smtp_log(substr($line, 10));
-        smtp_log('záloha: PHP mail() → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal'));
+        smtp_log('záloha: PHP mail() z ' . $sender . ' → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal'));
         return $ok;
     }
     smtp_log(null, true);

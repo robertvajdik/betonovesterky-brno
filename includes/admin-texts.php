@@ -455,4 +455,6 @@ Způsob odeslání: {transport}',
     'adm.invoice.x_taxable' => 'DUZP',
     'adm.invoice.x_total' => 'Celkem s DPH',
     'adm.invoice.x_vat' => 'DPH',
+    'adm.inq.link_no_email' => 'Poptávka nemá platný e-mail zákazníka – odkaz nelze poslat.',
+    'adm.inq.link_sent_to' => 'Odkaz na poptávku byl odeslán na {email}.',
 ];

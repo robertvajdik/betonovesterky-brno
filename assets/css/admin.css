@@ -153,7 +153,17 @@ code { background: var(--concrete-100); padding: 0 .3rem; border-radius: 2px; fo
 .cal__agenda { display: none; list-style: none; margin: 0; padding: 0; }
 .cal__agenda-empty { display: none; }
 @media (max-width: 760px) {
-  .cal__grid { display: none; }
+  /* mobil: kompaktní měsíc (všechny dny, události jako barevné proužky) + přehled po dnech pod ním */
+  .cal__row--head div { padding: .35rem 0; text-align: center; font-size: .68rem; }
+  .cal__day { min-height: 54px; padding: .2rem .15rem .25rem; gap: 2px; }
+  .cal__head { justify-content: center; }
+  .cal__add { display: none; }
+  .cal__num { align-self: center; font-size: .78rem; min-width: 1.5rem; line-height: 1.5rem; }
+  .cal__grid .cal-ev { font-size: 0; height: 5px; padding: 0; border-radius: 2px; border-width: 0; }
+  .cal__grid .cal-ev--wish { background: transparent; border: 1px dashed var(--accent); height: 5px; }
+  .cal__grid .cal-ev--event { background: var(--accent); }
+  .cal__more { font-size: .62rem; padding: 0; text-align: center; }
+  .cal__agenda { margin-top: 1rem; }
   .cal__agenda { display: grid; gap: .5rem; }
   .cal__agenda-empty { display: block; }
   .cal__agenda li { display: grid; grid-template-columns: 4.6rem 1fr; gap: .6rem; background: var(--white); border: 1px solid var(--concrete-200); padding: .6rem .7rem; }

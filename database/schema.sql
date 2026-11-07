@@ -992,3 +992,8 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 -- v23: SEO titulek úvodní stránky
 INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 ('seo.home_title', 'seo', 'line', 'Titulek úvodní stránky ve vyhledávání (ideálně do 60 znaků; prázdné = název – podtitul)', 'Betonové stěrky Brno – stěrky, omítky a malování', 'Concrete finishes Brno – microcement, plaster, painting', 1);
+
+-- v24: hlášky odeslání odkazu zákazníkovi
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.inq.link_no_email', 'adm', 'line', NULL, 'Poptávka nemá platný e-mail zákazníka – odkaz nelze poslat.', '', 1200),
+('adm.inq.link_sent_to', 'adm', 'line', NULL, 'Odkaz na poptávku byl odeslán na {email}.', '', 1201);

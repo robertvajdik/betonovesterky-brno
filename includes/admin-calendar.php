@@ -130,7 +130,8 @@ function inquiry_calendar(array $rows, string $month, string $statusFilter): str
     $gridEnd   = $last->modify('sunday this week');
     $events = array_values(array_filter(calendar_items($rows), fn($ev) => $ev['to'] >= $gridStart && $ev['from'] <= $gridEnd));
 
-    $qs   = fn(array $p) => admin_url(http_build_query(array_filter(['tab' => 'inquiries', 'view' => 'calendar', 'status' => $statusFilter, 'm' => $month] + $p)));
+    // $p má přednost (např. jiný měsíc) – u „+“ vyhrávají klíče levého pole
+    $qs   = fn(array $p) => admin_url(http_build_query(array_filter($p + ['tab' => 'inquiries', 'view' => 'calendar', 'status' => $statusFilter, 'm' => $month])));
     $link = fn(array $ev) => $ev['kind'] === 'event'
         ? $qs(['edit_event' => $ev['id']]) . '#udalost'
         : admin_url(http_build_query(array_filter(['tab' => 'inquiries', 'status' => $statusFilter])) . '#q' . $ev['id']);

@@ -70,7 +70,12 @@ if ($logged && $action !== '') {
         case 'inquiry_read':
             q("UPDATE inquiries SET is_read = 1 - is_read WHERE id = ?", [$id]); back('tab=inquiries');
         case 'inquiry_link':
-            back('tab=inquiries#q' . $id, send_track_link($id) ? t('adm.inq.link_sent') : t('adm.inq.link_failed'));
+            $inqMail = (string) q("SELECT email FROM inquiries WHERE id = ?", [$id])->fetchColumn();
+            if (!filter_var($inqMail, FILTER_VALIDATE_EMAIL)) back('tab=inquiries#q' . $id, t('adm.inq.link_no_email'));
+            $sent = send_track_link($id);
+            $_SESSION['mail_log'] = ['ok' => $sent, 'lines' => smtp_log(), 'to' => $inqMail, 'where' => 'inquiries'];
+            back('tab=inquiries#q' . $id, $sent ? t('adm.inq.link_sent_to', ['email' => $inqMail])
+                : t('adm.inq.link_failed') . (smtp_error() !== '' ? ' (' . smtp_error() . ')' : ''));
         case 'inquiry_delete':
             inquiry_delete_photos($id);
             q("DELETE FROM inquiries WHERE id = ?", [$id]); back('tab=inquiries', t('adm.inq.deleted'));
@@ -365,6 +370,12 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
   <?= admin_menu($tab) ?>
   <main class="container admin-main">
     <?php if ($msg): ?><div class="alert alert--ok"><?= e($msg) ?></div><?php endif; ?>
+    <?php if ($tab === 'inquiries' && ($log = $_SESSION['mail_log'] ?? null) && ($log['where'] ?? '') === 'inquiries'): unset($_SESSION['mail_log']); ?>
+      <details class="mail-log panel">
+        <summary><?= te('adm.mail.log_title', ['email' => (string) $log['to']]) ?> – <strong class="<?= $log['ok'] ? 'is-ok' : 'is-err' ?>"><?= te($log['ok'] ? 'adm.mail.log_ok' : 'adm.mail.log_err') ?></strong></summary>
+        <pre class="pre"><?= e(implode("\n", (array) $log['lines'])) ?></pre>
+      </details>
+    <?php endif; ?>
 
     <?php /* ================= POPTÁVKY ================= */ if ($tab === 'inquiries'): ?>
       <h1><?= te('adm.tab.inquiries') ?></h1>
