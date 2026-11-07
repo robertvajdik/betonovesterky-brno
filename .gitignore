@@ -24,3 +24,6 @@ desktop.ini
 .idea/
 .vscode/
 *.log
+
+# Tajný klíč pro odkazy zákazníků (generuje web)
+/includes/.app_key

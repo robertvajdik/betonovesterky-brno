@@ -67,6 +67,8 @@ if ($logged && $action !== '') {
         // Poptávky
         case 'inquiry_read':
             q("UPDATE inquiries SET is_read = 1 - is_read WHERE id = ?", [$id]); back('tab=inquiries');
+        case 'inquiry_link':
+            back('tab=inquiries#q' . $id, send_track_link($id) ? t('adm.inq.link_sent') : t('adm.inq.link_failed'));
         case 'inquiry_delete':
             q("DELETE FROM inquiries WHERE id = ?", [$id]); back('tab=inquiries', t('adm.inq.deleted'));
         case 'inquiry_reply':
@@ -243,6 +245,10 @@ if ($logged && $action !== '') {
             props(true);
             $r = write_seo_files();
             back('tab=settings&grp=robots', ($r['robots.txt'] && $r['sitemap.xml']) ? t('adm.seo.generated') : t('adm.seo.err_write'));
+        case 'mail_test':
+            $to = (string) ($CONFIG['notify_email'] ?? '') ?: site('email');
+            $ok = send_mail($to, t('adm.mail.test_subject'), t('adm.mail.test_body', ['transport' => smtp_on() ? 'SMTP ' . $CONFIG['smtp']['host'] : 'PHP mail()']));
+            back('tab=settings&grp=site#mail', $ok ? t('adm.mail.test_ok', ['email' => $to]) : t('adm.mail.test_fail', ['error' => smtp_error() ?: 'mail()']));
         case 'seo_remove':
             foreach (['robots.txt', 'sitemap.xml'] as $f) if (is_file(ROOT_DIR . "/$f")) @unlink(ROOT_DIR . "/$f");
             back('tab=settings&grp=robots', t('adm.seo.removed'));
@@ -404,6 +410,7 @@ $tabs = [
           <div class="item__actions">
             <a href="<?= e(url('admin/contract.php?inquiry=' . (int) $r['id'])) ?>" class="btn btn--small"><?= te('adm.inq.contract') ?></a>
             <a href="<?= e(url('admin/invoice.php?' . ($deals ? 'contract=' . (int) $deals[0]['id'] : 'inquiry=' . (int) $r['id']))) ?>" class="btn btn--small"><?= te('adm.inq.invoice') ?></a>
+            <?= btn_post('inquiry_link', (int) $r['id'], t('adm.inq.send_link')) ?>
             <?= btn_post('inquiry_read', (int) $r['id'], t($r['is_read'] ? 'adm.inq.mark_new' : 'adm.inq.mark_read')) ?>
             <?= btn_post('inquiry_delete', (int) $r['id'], t('adm.delete'), 'btn btn--small btn--danger', t('adm.confirm_delete')) ?>
           </div>
@@ -781,6 +788,15 @@ $tabs = [
         <?php endforeach; ?>
         <button class="btn"><?= te('adm.save') ?></button>
       </form>
+
+      <?php if ($grp === 'site'): ?>
+        <div class="panel" id="mail">
+          <h2><?= te('adm.mail.title') ?></h2>
+          <p><?= smtp_on() ? te('adm.mail.via_smtp', ['host' => (string) $CONFIG['smtp']['host']]) : te('adm.mail.via_php') ?></p>
+          <p class="muted"><?= te('adm.mail.recaptcha', ['state' => t(recaptcha_on() ? 'adm.mail.on' : 'adm.mail.off')]) ?></p>
+          <?= btn_post('mail_test', 0, t('adm.mail.test_btn', ['email' => (string) ($CONFIG['notify_email'] ?? '') ?: site('email')]), 'btn btn--small') ?>
+        </div>
+      <?php endif; ?>
 
       <?php if ($grp === 'robots'): $hasFiles = is_file(ROOT_DIR . '/robots.txt') || is_file(ROOT_DIR . '/sitemap.xml'); ?>
         <div class="panel">

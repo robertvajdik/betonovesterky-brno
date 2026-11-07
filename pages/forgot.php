@@ -29,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('acc', t('acc.reset_done'));
             redirect(route_url('account'));
         }
+    } elseif ($token === '' && !recaptcha_ok('forgot')) {
+        $errors[] = t('form.err_captcha');
     } elseif ($token === '') {
         // Krok 1: žádost o odkaz. Odpověď je vždy stejná – neprozradí, zda účet existuje.
         $email = mb_strtolower(post('email', 160));
@@ -53,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <section class="section section--tight">
   <div class="container auth">
-    <form method="post" class="form panel">
+    <form method="post" class="form panel"<?= $token === '' ? recaptcha_attrs('forgot') : '' ?>>
       <?php if ($errors): ?><div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div><?php endif; ?>
       <?= csrf_field() ?>
       <?php if ($token !== '' && !$resetRow): ?>
@@ -69,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php else: ?>
         <label><span class="field__label"><?= te('acc.email') ?></span><input type="email" name="email" required autocomplete="email"></label>
         <button class="btn" type="submit"><?= te('acc.forgot_btn') ?></button>
+        <?= recaptcha_note() ?>
         <p class="auth__links"><a href="<?= e(route_url('login')) ?>"><?= te('acc.login_link') ?></a></p>
       <?php endif; ?>
     </form>

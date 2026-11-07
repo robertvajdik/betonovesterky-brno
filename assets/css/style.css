@@ -489,3 +489,32 @@ p { margin: 0 0 1em; }
   .consent__actions, .consent__actions .btn { flex: 1 1 auto; }
   .footer__consent { margin-left: 0; display: inline-block; padding: .55rem 0; }
 }
+
+/* reCAPTCHA v3: plovoucí odznak skrytý, místo něj povinný text pod formulářem */
+.grecaptcha-badge { visibility: hidden !important; }
+.recaptcha-note { margin: .2rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--concrete-600); }
+.recaptcha-note a { color: inherit; }
+
+/* ---------- Soukromý odkaz zákazníka (/poptavka/) ---------- */
+.track { display: grid; gap: 1.5rem; }
+.track .panel h2 { font-size: 1.25rem; margin-top: 0; }
+.track .kv { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+.track .kv dt { font-weight: 700; color: var(--ink); }
+.track .kv dd { margin: 0; overflow-wrap: anywhere; }
+.track-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; counter-reset: step; }
+.track-steps li { position: relative; padding-top: 2.4rem; font-size: .9rem; color: var(--concrete-600); text-align: center; counter-increment: step; }
+.track-steps li::before { content: counter(step); position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2rem; height: 2rem; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 800; background: var(--concrete-100); color: var(--concrete-600); }
+.track-steps li.is-done::before { content: "✓"; background: var(--ink); color: var(--white); }
+.track-steps li.is-current { color: var(--ink); font-weight: 700; }
+.track-steps li.is-current::before { background: var(--accent); color: var(--white); }
+.track-docs { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.track-docs li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4rem 1rem; padding-bottom: .7rem; border-bottom: 1px solid var(--concrete-100); }
+.track__help { margin: 0; }
+@media (max-width: 600px) {
+  .track .kv { grid-template-columns: 1fr; gap: 0; }
+  .track .kv dd { margin-bottom: .6rem; }
+  .track-steps { grid-template-columns: 1fr 1fr; row-gap: 1.2rem; }
+  .track-docs .link-arrow { padding: .4rem 0; }
+}
+.track .badge { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: #e3f1e4; color: #23592a; padding: .1rem .45rem; border-radius: 2px; }

@@ -7,6 +7,7 @@ $self     = route_url('reviews');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form'] ?? '') === 'review') {
     if (!empty($_POST['website'])) redirect($self);
     if (!csrf_ok()) $errors[] = t('form.err_csrf');
+    elseif (!recaptcha_ok('review')) $errors[] = t('form.err_captcha');
     $author = post('author', 100);
     $loc    = post('location', 100);
     $text   = post('text', 3000);
@@ -77,7 +78,7 @@ $ok  = flash('review');
 <section class="section section--tint" id="napsat">
   <div class="container narrow">
     <h2><?= te('reviews.form_title') ?></h2>
-    <form method="post" class="form" novalidate>
+    <form method="post" class="form" novalidate<?= recaptcha_attrs('review') ?>>
       <?php if ($ok): ?><div class="alert alert--ok" role="status"><?= e($ok) ?></div><?php endif; ?>
       <?php if ($errors): ?><div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div><?php endif; ?>
       <?= csrf_field() ?>
@@ -96,6 +97,7 @@ $ok  = flash('review');
       </fieldset>
       <label><?= te('reviews.f_text') ?><textarea name="text" rows="5" required><?= e(post('text')) ?></textarea></label>
       <button class="btn" type="submit"><?= te('reviews.submit') ?></button>
+      <?= recaptcha_note() ?>
     </form>
   </div>
 </section>

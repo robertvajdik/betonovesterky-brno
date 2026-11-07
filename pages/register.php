@@ -10,6 +10,7 @@ $next   = (string) ($_POST['next'] ?? $_GET['next'] ?? '');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($_POST['website'])) redirect(route_url('home'));            // honeypot
     if (!csrf_ok()) $errors[] = t('form.err_csrf');
+    elseif (!recaptcha_ok('register')) $errors[] = t('form.err_captcha');
     $name  = post('name', 120);
     $email = mb_strtolower(post('email', 160));
     $phone = post('phone', 40);
@@ -37,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <section class="section section--tight">
   <div class="container auth">
-    <form method="post" class="form panel">
+    <form method="post" class="form panel"<?= recaptcha_attrs('register') ?>>
       <?php if ($errors): ?><div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div><?php endif; ?>
       <?= csrf_field() ?>
       <input type="hidden" name="next" value="<?= e($next) ?>">
@@ -51,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <span><?= te('acc.gdpr') ?> (<a href="<?= e(privacy_url()) ?>" target="_blank" rel="noopener"><?= te('form.gdpr_more') ?></a>).</span>
       </label>
       <button class="btn" type="submit"><?= te('acc.register_btn') ?></button>
+      <?= recaptcha_note() ?>
       <p class="auth__links"><?= te('acc.have_account') ?> <a href="<?= e(route_url('login')) ?>"><?= te('acc.login_link') ?></a></p>
     </form>
   </div>

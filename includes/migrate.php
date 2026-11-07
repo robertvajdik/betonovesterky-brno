@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 12;
+const DB_VERSION = 14;
 
 function db_migrate(): void
 {
@@ -104,6 +104,11 @@ function db_migrate(): void
         INDEX idx_inv_inquiry (inquiry_id),
         INDEX idx_inv_contract (contract_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
+
+    // v13: soukromý odkaz zákazníka na poptávku (ukládá se jen hash tokenu)
+    if (!$hasColumn('inquiries', 'access_hash')) {
+        $try("ALTER TABLE inquiries ADD access_hash CHAR(64) NULL AFTER id");
+    }
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';

@@ -16,6 +16,7 @@ const ROUTES = [
     'register'   => ['registrace', 'register'],
     'forgot'     => ['zapomenute-heslo', 'forgot-password'],
     'account'    => ['muj-ucet', 'my-account'],
+    'track'      => ['poptavka', 'enquiry'],             // soukromý odkaz zákazníka (bez účtu)
 ];
 
 function e(?string $s): string
@@ -358,6 +359,7 @@ function handle_inquiry(string $source, string $returnUrl): array
 
     if (!empty($_POST['website'])) redirect($returnUrl);       // honeypot
     if (!csrf_ok()) return [t('form.err_csrf')];
+    if (!recaptcha_ok('inquiry')) return [t('form.err_captcha')];
 
     $fields = form_fields();
     $data = [];
@@ -404,6 +406,7 @@ function handle_inquiry(string $source, string $returnUrl): array
         json_encode($data, JSON_UNESCAPED_UNICODE), $source, lang(), $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
     $newId = (int) db()->lastInsertId();
+    send_track_link($newId);                                // zákazníkovi odkaz na stav poptávky, smlouvu a faktury
 
     global $CONFIG;
     if (!empty($CONFIG['notify_email'])) {

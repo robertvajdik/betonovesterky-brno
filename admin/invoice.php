@@ -7,9 +7,10 @@ declare(strict_types=1);
  *   ?id=ID&edit=1                                 úprava
  *   ?list=1                                       přehled faktur
  */
-require __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-if (empty($_SESSION['admin_id'])) {
+// PUBLIC_DOC = zobrazení pro zákazníka přes soukromý odkaz (pages/track.php ověřil token): jen čtení, bez tlačítek administrace
+if (!defined('PUBLIC_DOC') && empty($_SESSION['admin_id'])) {
     header('Location: ' . url('admin/'), true, 303);
     exit;
 }
@@ -52,7 +53,35 @@ function inv_totals(array $items, float $paidDeposit, bool $vatPayer): array
 }
 
 // ---------- Akce ----------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrf_ok() && ($_POST['action'] ?? '') === 'paid' && $id) {
+if (!defined('PUBLIC_DOC') && $_SERVER['REQUEST_METHOD'] === 'POST' && csrf_ok() && ($_POST['action'] ?? '') === 'send' && $id) {
+    // faktura e-mailem: platební údaje + odkaz na fakturu (přes soukromý odkaz poptávky, bez přihlášení)
+    $iv  = q("SELECT i.*, COALESCE(i.inquiry_id, c.inquiry_id) AS inq FROM invoices i LEFT JOIN contracts c ON c.id = i.contract_id WHERE i.id = ?", [$id])->fetch();
+    $ivd = $iv ? (array) json_decode($iv['data'], true) : [];
+    $inqRow = $iv && $iv['inq'] ? q("SELECT email, lang FROM inquiries WHERE id = ?", [(int) $iv['inq']])->fetch() : null;
+    $to = filter_var((string) ($ivd['client_email'] ?? ''), FILTER_VALIDATE_EMAIL) ?: (string) ($inqRow['email'] ?? '');
+    if (!$iv || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        flash('invoice', t('adm.invoice.no_email'));
+    } else {
+        $lang = in_array($inqRow['lang'] ?? 'cs', LANGS, true) ? $inqRow['lang'] : 'cs';
+        $ok = send_customer_mail($to, $lang, ($ivd['kind'] ?? '') === 'deposit' ? 'invoice_deposit' : 'invoice', [
+            'number'  => $iv['number'],
+            'amount'  => number_format((float) $iv['total'], 2, ',', ' ') . ' Kč',
+            'due'     => date('j. n. Y', strtotime((string) $iv['due'])),
+            'vs'      => preg_replace('~\D~', '', $iv['number']),
+            'account' => site('bank'),
+            'url'     => $iv['inq'] ? track_link((int) $iv['inq'], $lang, '&invoice=' . $id) : '',
+        ]);
+        if ($ok) {
+            $ivd['sent_at'] = date('Y-m-d H:i');
+            $ivd['sent_to'] = $to;
+            q("UPDATE invoices SET data = ?, updated_at = NOW() WHERE id = ?", [json_encode($ivd, JSON_UNESCAPED_UNICODE), $id]);
+        }
+        flash('invoice', $ok ? t('adm.invoice.sent', ['email' => $to]) : t('adm.invoice.send_fail', ['error' => smtp_error() ?: 'mail()']));
+    }
+    header('Location: ' . $self . '?id=' . $id, true, 303);
+    exit;
+}
+if (!defined('PUBLIC_DOC') && $_SERVER['REQUEST_METHOD'] === 'POST' && csrf_ok() && ($_POST['action'] ?? '') === 'paid' && $id) {
     q("UPDATE invoices SET paid_at = IF(paid_at IS NULL, CURDATE(), NULL), updated_at = NOW() WHERE id = ?", [$id]);
     header('Location: ' . $self . '?id=' . $id, true, 303);
     exit;
@@ -217,6 +246,8 @@ if ($invoice && !$edit && !$errors):
   .toolbar .primary { background: var(--accent); border-color: var(--accent); }
   .toolbar span { color: #cfcac2; font-weight: 400; margin-right: auto; }
   .toolbar form { margin: 0; }
+  .flash { max-width: 210mm; margin: 16px auto 0; padding: .7rem 1rem; background: #fff; border-left: 0; border: 1px solid var(--line); font: 600 14px/1.4 system-ui, sans-serif; }
+  @media print { .flash { display: none; } }
   .sheet { width: 210mm; max-width: 100%; margin: 24px auto; padding: 14mm 16mm; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,.12); }
   .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border-bottom: 2px solid var(--ink); padding-bottom: .8rem; margin-bottom: 1.2rem; }
   h1 { font-size: 17pt; margin: 0; letter-spacing: .01em; }
@@ -244,14 +275,19 @@ if ($invoice && !$edit && !$errors):
 </head>
 <body>
 <div class="toolbar">
-  <span><?= e($invoice['number']) ?><?= $invoice['paid_at'] ? ' · ' . te('adm.invoice.paid_on', ['date' => inv_date((string) $invoice['paid_at'])]) : '' ?></span>
+  <span><?= e($invoice['number']) ?><?= $invoice['paid_at'] ? ' · ' . te('adm.invoice.paid_on', ['date' => inv_date((string) $invoice['paid_at'])]) : '' ?><?= !defined('PUBLIC_DOC') && !empty($d['sent_at']) ? ' · ' . te('adm.invoice.sent_on', ['date' => date('j. n. H:i', strtotime((string) $d['sent_at'])), 'email' => (string) ($d['sent_to'] ?? '')]) : '' ?></span>
+  <?php if (!defined('PUBLIC_DOC')): ?>
   <a href="<?= e($self . '?list=1') ?>"><?= te('adm.invoice.list_title') ?></a>
   <a href="<?= e($self . '?id=' . $id . '&edit=1') ?>"><?= te('adm.edit') ?></a>
   <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="paid"><input type="hidden" name="id" value="<?= (int) $id ?>">
     <button type="submit"><?= te($invoice['paid_at'] ? 'adm.invoice.mark_unpaid' : 'adm.invoice.mark_paid') ?></button></form>
+  <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="send"><input type="hidden" name="id" value="<?= (int) $id ?>">
+    <button type="submit"><?= te(empty($d['sent_at']) ? 'adm.invoice.send_btn' : 'adm.invoice.resend_btn') ?></button></form>
+  <?php else: ?><a href="<?= e(PUBLIC_DOC) ?>"><?= te('track.back') ?></a><?php endif; ?>
   <button type="button" class="primary" onclick="window.print()"><?= te('adm.contract.print') ?></button>
 </div>
 
+<?php if (!defined('PUBLIC_DOC') && ($flash = flash('invoice'))): ?><div class="flash" role="status"><?= e($flash) ?></div><?php endif; ?>
 <article class="sheet">
   <div class="head">
     <div><h1><?= e($title) ?></h1><?php if ($isDeposit): ?><div style="color:var(--muted)"><?= te('adm.invoice.not_tax_doc') ?></div><?php endif; ?></div>

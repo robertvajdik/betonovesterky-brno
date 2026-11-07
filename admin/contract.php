@@ -6,9 +6,10 @@ declare(strict_types=1);
  *   ?id=ID           hotová smlouva k tisku
  *   ?id=ID&edit=1    úprava uložené smlouvy
  */
-require __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-if (empty($_SESSION['admin_id'])) {
+// PUBLIC_DOC = zobrazení pro zákazníka přes soukromý odkaz (pages/track.php ověřil token): jen čtení, bez tlačítek administrace
+if (!defined('PUBLIC_DOC') && empty($_SESSION['admin_id'])) {
     header('Location: ' . url('admin/'), true, 303);
     exit;
 }
@@ -172,10 +173,12 @@ if ($contract && !$edit && !$errors):
 <body>
 <div class="toolbar">
   <span><?= e($contract['number']) ?></span>
+  <?php if (!defined('PUBLIC_DOC')): ?>
   <a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.contract.back_admin') ?></a>
   <a href="<?= e($self . '?id=' . $id . '&edit=1') ?>"><?= te('adm.edit') ?></a>
   <?php if ($dep > 0): ?><a href="<?= e(url('admin/invoice.php?contract=' . $id . '&kind=deposit')) ?>"><?= te('adm.contract.invoice_deposit') ?></a><?php endif; ?>
   <a href="<?= e(url('admin/invoice.php?contract=' . $id)) ?>"><?= te('adm.contract.invoice') ?></a>
+  <?php else: ?><a href="<?= e(PUBLIC_DOC) ?>"><?= te('track.back') ?></a><?php endif; ?>
   <button type="button" class="primary" onclick="window.print()"><?= te('adm.contract.print') ?></button>
 </div>
 

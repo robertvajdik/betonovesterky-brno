@@ -5,7 +5,7 @@ declare(strict_types=1);
 // Zákaznické účty: registrace, přihlášení, obnova hesla, e-maily
 // ---------------------------------------------------------------
 
-const PRIVATE_ROUTES = ['login', 'register', 'forgot', 'account'];
+const PRIVATE_ROUTES = ['login', 'register', 'forgot', 'account', 'track'];
 
 const INQUIRY_STATUSES = ['new', 'in_progress', 'quoted', 'done', 'cancelled'];
 
@@ -93,6 +93,56 @@ function new_token(): array
     return [$t, hash('sha256', $t)];
 }
 
+/**
+ * Tajný klíč webu pro odkazy zákazníků: config.php → 'app_key', jinak se jednou vygeneruje do includes/.app_key
+ * (složka includes je z webu nepřístupná). Bez klíče z DB samotné odkazy spočítat nejde.
+ */
+function app_key(): string
+{
+    global $CONFIG;
+    if (!empty($CONFIG['app_key'])) return (string) $CONFIG['app_key'];
+    $file = __DIR__ . '/.app_key';
+    $key = is_file($file) ? trim((string) file_get_contents($file)) : '';
+    if (strlen($key) < 32) {
+        $key = bin2hex(random_bytes(32));
+        if (@file_put_contents($file, $key, LOCK_EX) === false) error_log('Nelze zapsat includes/.app_key – doplňte app_key do config.php');
+    }
+    return $key;
+}
+
+/** Token odkazu: HMAC(id + náhodná sůl poptávky). Sůl je v inquiries.access_hash; nová sůl = staré odkazy přestanou platit. */
+function track_token(int $inquiryId, bool $create = true): ?string
+{
+    $salt = (string) q("SELECT access_hash FROM inquiries WHERE id = ?", [$inquiryId])->fetchColumn();
+    if ($salt === '') {
+        if (!$create) return null;
+        $salt = bin2hex(random_bytes(32));
+        q("UPDATE inquiries SET access_hash = ? WHERE id = ?", [$salt, $inquiryId]);
+    }
+    return hash_hmac('sha256', $inquiryId . ':' . $salt, app_key());
+}
+
+function track_token_ok(int $inquiryId, string $token): bool
+{
+    $expected = preg_match('~^[a-f0-9]{64}$~', $token) ? track_token($inquiryId, false) : null;
+    return $expected !== null && hash_equals($expected, $token);
+}
+
+/** Soukromý odkaz na poptávku (stále stejný, dokud se sůl nezmění). $extra např. '&invoice=5' */
+function track_link(int $inquiryId, ?string $lang = null, string $extra = ''): string
+{
+    return abs_url(route_url('track', $lang)) . '?id=' . $inquiryId . '&t=' . track_token($inquiryId) . $extra;
+}
+
+/** Pošle zákazníkovi e-mail s odkazem na poptávku (v jazyce poptávky) */
+function send_track_link(int $inquiryId): bool
+{
+    $inq = q("SELECT id, email, lang FROM inquiries WHERE id = ?", [$inquiryId])->fetch();
+    if (!$inq || !filter_var($inq['email'], FILTER_VALIDATE_EMAIL)) return false;
+    $lang = in_array($inq['lang'], LANGS, true) ? $inq['lang'] : 'cs';
+    return send_customer_mail($inq['email'], $lang, 'track', ['id' => $inquiryId, 'url' => track_link($inquiryId, $lang)]);
+}
+
 function status_label(string $s): string
 {
     return t('status.' . $s);
@@ -111,6 +161,10 @@ function send_mail(string $to, string $subject, string $body, ?string $replyTo =
     $headers = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n";
     if (filter_var($from, FILTER_VALIDATE_EMAIL)) $headers .= "From: {$name} <{$from}>\r\n";
     if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers .= "Reply-To: {$replyTo}\r\n";
+    if (smtp_on()) {                                       // SMTP z config.php (includes/mailer.php)
+        $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from;
+        return smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null);
+    }
     return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
 }
 

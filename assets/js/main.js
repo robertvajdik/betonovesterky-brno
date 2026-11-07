@@ -83,6 +83,46 @@
     });
   }
 
+  // reCAPTCHA v3: skript Googlu až při vyplňování formuláře, token se získá těsně před odesláním
+  var rcLoading = null;
+  var loadRecaptcha = function (key) {
+    if (!rcLoading) {
+      rcLoading = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(key);
+        s.async = true;
+        s.onload = function () { window.grecaptcha.ready(resolve); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    return rcLoading;
+  };
+  document.querySelectorAll('form[data-recaptcha]').forEach(function (form) {
+    var key = form.getAttribute('data-sitekey'), action = form.getAttribute('data-recaptcha');
+    form.addEventListener('focusin', function () { loadRecaptcha(key).catch(function () {}); }, { once: true });
+    form.addEventListener('submit', function (ev) {
+      if (form.getAttribute('data-rc-ready') === '1') return;
+      ev.preventDefault();
+      var btn = form.querySelector('[type=submit]'), done = false;
+      if (btn) btn.disabled = true;
+      var finish = function (token) {
+        if (done) return;
+        done = true;
+        var inp = form.querySelector('input[name="g-recaptcha-response"]');
+        if (!inp) { inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'g-recaptcha-response'; form.appendChild(inp); }
+        inp.value = token || '';
+        form.setAttribute('data-rc-ready', '1');
+        if (btn) btn.disabled = false;
+        HTMLFormElement.prototype.submit.call(form);
+      };
+      var timer = setTimeout(function () { finish(''); }, 8000);   // Google neodpovídá → server rozhodne
+      loadRecaptcha(key)
+        .then(function () { return window.grecaptcha.execute(key, { action: action }); })
+        .then(function (t) { clearTimeout(timer); finish(t); }, function () { clearTimeout(timer); finish(''); });
+    });
+  });
+
   // Mobilní menu
   var toggle = document.querySelector('.nav-toggle');
   var nav = document.getElementById('nav');

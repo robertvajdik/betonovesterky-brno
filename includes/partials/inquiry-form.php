@@ -1,5 +1,5 @@
 <?php /** @var array $errors */ $ok = flash('inquiry'); ?>
-<form method="post" class="form" id="formular">
+<form method="post" class="form" id="formular"<?= recaptcha_attrs('inquiry') ?>>
   <?php if ($ok): ?><div class="alert alert--ok" role="status"><?= e($ok) ?></div><?php endif; ?>
   <?php if (!empty($errors)): ?>
     <div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div>
@@ -27,4 +27,5 @@
     <span><?= te('form.gdpr') ?> (<a href="<?= e(privacy_url()) ?>" target="_blank" rel="noopener"><?= te('form.gdpr_more') ?></a>).</span>
   </label>
   <button class="btn" type="submit"><?= te('form.submit') ?></button>
+  <?= recaptcha_note() ?>
 </form>
