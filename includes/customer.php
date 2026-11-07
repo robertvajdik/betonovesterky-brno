@@ -165,7 +165,10 @@ function send_mail(string $to, string $subject, string $body, ?string $replyTo =
         $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from;
         return smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null);
     }
-    return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
+    smtp_log(null, true);
+    $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
+    smtp_log('PHP mail() → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal (nastavte SMTP v config.php)'));
+    return $ok;
 }
 
 /** E-mail zákazníkovi v jeho jazyce; texty z vlastností mail.* */

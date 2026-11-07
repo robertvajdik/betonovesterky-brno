@@ -280,8 +280,12 @@ if ($logged && $action !== '') {
             $r = write_seo_files();
             back('tab=settings&grp=robots', ($r['robots.txt'] && $r['sitemap.xml']) ? t('adm.seo.generated') : t('adm.seo.err_write'));
         case 'mail_test':
-            $to = (string) ($CONFIG['notify_email'] ?? '') ?: site('email');
+            // zkušební e-mail na libovolnou adresu; průběh komunikace se serverem se zobrazí pod tlačítkem
+            $to = post('to', 160);
+            if (!filter_var($to, FILTER_VALIDATE_EMAIL)) back('tab=settings&grp=site#mail', t('adm.mail.err_address'));
+            $_SESSION['mail_test_to'] = $to;
             $ok = send_mail($to, t('adm.mail.test_subject'), t('adm.mail.test_body', ['transport' => smtp_on() ? 'SMTP ' . $CONFIG['smtp']['host'] : 'PHP mail()']));
+            $_SESSION['mail_log'] = ['ok' => $ok, 'lines' => smtp_log(), 'to' => $to];
             back('tab=settings&grp=site#mail', $ok ? t('adm.mail.test_ok', ['email' => $to]) : t('adm.mail.test_fail', ['error' => smtp_error() ?: 'mail()']));
         case 'seo_remove':
             foreach (['robots.txt', 'sitemap.xml'] as $f) if (is_file(ROOT_DIR . "/$f")) @unlink(ROOT_DIR . "/$f");
@@ -867,7 +871,18 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
           <h2><?= te('adm.mail.title') ?></h2>
           <p><?= smtp_on() ? te('adm.mail.via_smtp', ['host' => (string) $CONFIG['smtp']['host']]) : te('adm.mail.via_php') ?></p>
           <p class="muted"><?= te('adm.mail.recaptcha', ['state' => t(recaptcha_on() ? 'adm.mail.on' : 'adm.mail.off')]) ?></p>
-          <?= btn_post('mail_test', 0, t('adm.mail.test_btn', ['email' => (string) ($CONFIG['notify_email'] ?? '') ?: site('email')]), 'btn btn--small') ?>
+          <form method="post" class="form mail-test">
+            <?= csrf_field() ?><input type="hidden" name="action" value="mail_test">
+            <label class="field"><?= te('adm.mail.test_to') ?>
+              <input type="email" name="to" required autocomplete="email" value="<?= e((string) ($_SESSION['mail_test_to'] ?? '') ?: (string) ($CONFIG['notify_email'] ?? '') ?: site('email')) ?>"></label>
+            <button class="btn btn--small"><?= te('adm.mail.test_send') ?></button>
+          </form>
+          <?php if ($log = $_SESSION['mail_log'] ?? null): unset($_SESSION['mail_log']); ?>
+            <details class="mail-log" open>
+              <summary><?= te('adm.mail.log_title', ['email' => (string) $log['to']]) ?> – <strong class="<?= $log['ok'] ? 'is-ok' : 'is-err' ?>"><?= te($log['ok'] ? 'adm.mail.log_ok' : 'adm.mail.log_err') ?></strong></summary>
+              <pre class="pre"><?= e(implode("\n", (array) $log['lines'])) ?></pre>
+            </details>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
 

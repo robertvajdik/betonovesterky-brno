@@ -197,3 +197,13 @@ code { background: var(--concrete-100); padding: 0 .3rem; border-radius: 2px; fo
   .ff__row { grid-template-columns: 1fr auto; }
   .ff__toggles { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* Zkušební e-mail a průběh odeslání */
+.mail-test { display: flex; gap: .6rem; align-items: end; flex-wrap: wrap; margin-top: .8rem; }
+.mail-test .field { flex: 1 1 280px; }
+.mail-test .btn { min-height: 48px; }
+.mail-log { margin-top: 1rem; }
+.mail-log > summary { cursor: pointer; font-size: .92rem; margin-bottom: .5rem; }
+.mail-log .is-ok { color: #23592a; }
+.mail-log .is-err { color: #a3321f; }
+.mail-log .pre { max-height: 360px; overflow: auto; font-size: .8rem; line-height: 1.55; white-space: pre-wrap; }

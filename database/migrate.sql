@@ -653,3 +653,12 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.form.system_note', 'adm', 'line', NULL, 'Základní pole se ukládá i do přehledu poptávek, proto ho nelze smazat – můžete ho jen skrýt nebo přejmenovat.', '', 957),
 ('adm.form.visible', 'adm', 'line', NULL, 'Zobrazeno', '', 958);
 UPDATE properties SET value_cs = 'Možnosti výběru' WHERE pkey = 'adm.form.f_options' AND value_cs = 'Možnosti (select)';
+
+-- v20: zkušební e-mail na libovolnou adresu, průběh odeslání
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.mail.err_address', 'adm', 'line', NULL, 'Zadejte platnou e-mailovou adresu.', '', 980),
+('adm.mail.log_err', 'adm', 'line', NULL, 'chyba', '', 981),
+('adm.mail.log_ok', 'adm', 'line', NULL, 'odesláno', '', 982),
+('adm.mail.log_title', 'adm', 'line', NULL, 'Průběh odeslání na {email}', '', 983),
+('adm.mail.test_send', 'adm', 'line', NULL, 'Odeslat zkušební e-mail', '', 984),
+('adm.mail.test_to', 'adm', 'line', NULL, 'Poslat zkušební e-mail na adresu', '', 985);
