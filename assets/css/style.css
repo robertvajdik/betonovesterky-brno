@@ -210,7 +210,7 @@ p { margin: 0 0 1em; }
 .footer { background: var(--ink); color: var(--concrete-400); padding: 3rem 0 1.5rem; font-size: .94rem; }
 .footer__grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2rem; }
 .footer__logo { max-height: 56px; width: auto; filter: brightness(0) invert(1); opacity: .9; }
-.footer h4 { color: var(--white); font-size: 1rem; }
+.footer h4, .footer .footer__title { color: var(--white); font-size: 1rem; font-weight: 700; margin: 0 0 .6em; }
 .footer ul { list-style: none; padding: 0; margin: 0; }
 .footer li { margin-bottom: .5rem; }
 .footer a { color: var(--concrete-200); text-decoration: none; overflow-wrap: anywhere; }
@@ -224,7 +224,7 @@ p { margin: 0 0 1em; }
 .form__grid, .form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .field--wide { grid-column: 1 / -1; }
 .form label { display: grid; gap: .35rem; font-size: .88rem; font-weight: 600; color: var(--ink); }
-.form input[type=text], .form input[type=email], .form input[type=tel], .form input[type=number], .form input[type=date],
+.form input[type=text], .form input[type=email], .form input[type=tel], .form input[type=number], .form input[type=date], .form input[type=time], .form input[type=search], .form input[type=url],
 .form input[type=password], .form input[type=file], .form textarea, .form select {
   width: 100%; min-height: 48px; padding: .75rem .9rem; border: 1px solid var(--concrete-200); border-radius: var(--radius);
   font: inherit; font-size: 16px; font-weight: 400; color: var(--ink); background: var(--concrete-50);
@@ -283,7 +283,7 @@ p { margin: 0 0 1em; }
 .reviews { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1.25rem; }
 .review { margin: 0; background: var(--white); padding: 1.5rem; border: 1px solid var(--concrete-200); }
 .review footer { font-size: .9rem; color: var(--concrete-600); }
-.review__title { font-size: 1.05rem; margin: 0 0 .5rem; }
+.review__title { font-size: 1.05rem; font-weight: 700; margin: 0 0 .5rem; }
 .reviews-source { margin: .6rem 0 0; font-size: .95rem; color: var(--concrete-600); }
 .reviews-source a { color: var(--accent-dark); }
 .stars { color: var(--accent); letter-spacing: .1em; }

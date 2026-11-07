@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 20;
+const DB_VERSION = 22;
 
 function db_migrate(): void
 {
@@ -119,6 +119,21 @@ function db_migrate(): void
         size        INT UNSIGNED NOT NULL DEFAULT 0,
         created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_file_inquiry (inquiry_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
+
+    // v21: vlastní události v kalendáři administrace
+    $try("CREATE TABLE IF NOT EXISTS calendar_events (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        inquiry_id  INT UNSIGNED NULL,
+        title       VARCHAR(200) NOT NULL,
+        starts      DATE NOT NULL,
+        ends        DATE NULL,
+        time_from   TIME NULL,
+        time_to     TIME NULL,
+        place       VARCHAR(200) NULL,
+        note        TEXT NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_event_starts (starts)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)

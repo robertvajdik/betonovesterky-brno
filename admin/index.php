@@ -279,6 +279,26 @@ if ($logged && $action !== '') {
             props(true);
             $r = write_seo_files();
             back('tab=settings&grp=robots', ($r['robots.txt'] && $r['sitemap.xml']) ? t('adm.seo.generated') : t('adm.seo.err_write'));
+        // Kalendář: vlastní události (zaměření, schůzky…)
+        case 'event_save':
+            $title  = post('title', 200);
+            $starts = post('starts', 10);
+            $ends   = post('ends', 10);
+            $okDate = fn(string $d) => (bool) DateTimeImmutable::createFromFormat('!Y-m-d', $d);
+            $okTime = fn(string $t) => (bool) preg_match('~^([01]\d|2[0-3]):[0-5]\d$~', $t);
+            if ($title === '' || !$okDate($starts)) back('tab=inquiries&view=calendar', t('adm.cal.err_required'));
+            $ends  = $okDate($ends) && $ends > $starts ? $ends : null;
+            $tFrom = $okTime(post('time_from', 5)) ? post('time_from', 5) : null;
+            $tTo   = $tFrom && $okTime(post('time_to', 5)) ? post('time_to', 5) : null;
+            $inq   = (int) ($_POST['inquiry_id'] ?? 0) ?: null;
+            $vals  = [$inq, $title, $starts, $ends, $tFrom, $tTo, nn(post('place', 200)), nn(post('note', 2000))];
+            if ($id) q("UPDATE calendar_events SET inquiry_id=?, title=?, starts=?, ends=?, time_from=?, time_to=?, place=?, note=? WHERE id=?", [...$vals, $id]);
+            else     q("INSERT INTO calendar_events (inquiry_id, title, starts, ends, time_from, time_to, place, note) VALUES (?,?,?,?,?,?,?,?)", $vals);
+            back('tab=inquiries&view=calendar&m=' . substr($starts, 0, 7), t('adm.cal.saved'));
+        case 'event_delete':
+            $ev = q("SELECT starts FROM calendar_events WHERE id = ?", [$id])->fetch();
+            q("DELETE FROM calendar_events WHERE id = ?", [$id]);
+            back('tab=inquiries&view=calendar' . ($ev ? '&m=' . substr((string) $ev['starts'], 0, 7) : ''), t('adm.cal.deleted'));
         case 'mail_test':
             // zkušební e-mail na libovolnou adresu; průběh komunikace se serverem se zobrazí pod tlačítkem
             $to = post('to', 160);

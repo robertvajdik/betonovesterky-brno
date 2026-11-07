@@ -19,6 +19,13 @@ if (BASE_URL !== '' && stripos($path, BASE_URL) === 0) {
 }
 $slug = trim($path, '/');
 
+// Jedna adresa pro každou stránku: /kontakt → 301 → /kontakt/ (soubory s příponou, např. sitemap.xml, beze změny)
+if ($slug !== '' && !str_ends_with($path, '/') && !str_contains(basename($slug), '.') && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
+    $qs = (string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+    header('Location: ' . BASE_URL . '/' . implode('/', array_map('rawurlencode', explode('/', $slug))) . '/' . ($qs !== '' ? '?' . $qs : ''), true, 301);
+    exit;
+}
+
 try {
     // robots.txt / sitemap.xml – dynamicky, pokud ještě nebyly vygenerovány do souboru
     if ($slug === 'robots.txt') {

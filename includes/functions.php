@@ -176,11 +176,27 @@ function image_url(?string $file): ?string
 }
 
 /** <img> nebo stylový placeholder, pokud fotka chybí */
+/**
+ * ' width="…" height="…"' podle skutečného rozměru obrázku z /uploads (prohlížeč si podle nich vyhradí místo
+ * a stránka při načítání neposkakuje – Core Web Vitals / CLS). Externí nebo chybějící soubor = ''.
+ */
+function img_dims(?string $file): string
+{
+    static $cache = [];
+    if (!$file || preg_match('~^(https?:)?//|^/~', $file)) return '';
+    if (!array_key_exists($file, $cache)) {
+        $path = UPLOAD_DIR . '/' . $file;
+        $s = is_file($path) ? @getimagesize($path) : false;
+        $cache[$file] = $s && $s[0] > 0 ? ' width="' . (int) $s[0] . '" height="' . (int) $s[1] . '"' : '';
+    }
+    return $cache[$file];
+}
+
 function img(?string $file, string $alt, string $class = '', bool $eager = false): string
 {
     $src = image_url($file);
     if ($src) {
-        return '<img src="' . e($src) . '" alt="' . e($alt) . '" class="' . e($class) . '"' . ($eager ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">';
+        return '<img src="' . e($src) . '" alt="' . e($alt) . '" class="' . e($class) . '"' . img_dims($file) . ($eager ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">';
     }
     return '<div class="ph ' . e($class) . '" role="img" aria-label="' . e($alt) . '"><span>' . e($alt) . '</span></div>';
 }
@@ -288,7 +304,7 @@ function gallery_html(array $images, string $alt): string
         $cap = tr($im, 'caption') ?: $alt;
         $h .= '<a href="' . e($src) . '" class="gallery__item" data-lightbox data-caption="' . e($cap) . '"'
             . md('itemscope itemtype="https://schema.org/ImageObject" itemprop="contentUrl"') . '>'
-            . '<img src="' . e($src) . '" alt="' . e($cap) . '" loading="lazy" decoding="async"' . md('itemprop="thumbnailUrl"') . '>'
+            . '<img src="' . e($src) . '" alt="' . e($cap) . '"' . img_dims($im['file']) . ' loading="lazy" decoding="async"' . md('itemprop="thumbnailUrl"') . '>'
             . (schema_on('microdata') ? '<meta itemprop="caption" content="' . e($cap) . '">' : '') . '</a>';
     }
     return $h . '</div>';

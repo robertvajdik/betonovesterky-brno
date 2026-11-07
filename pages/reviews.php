@@ -61,7 +61,7 @@ $ok  = flash('review');
         <?php foreach ($reviews as $r): $mdOn = $r['rating'] !== null; /* microdata jen u hodnocení s hvězdami */ ?>
           <blockquote class="review"<?= $mdOn ? md('itemprop="review" itemscope itemtype="https://schema.org/Review"') : '' ?>>
             <?php if ($mdOn): ?><div class="stars" aria-label="<?= (int) $r['rating'] ?> <?= te('reviews.of5') ?>"<?= md('itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating"') ?>><?= stars((int) $r['rating']) ?><?php if (schema_on('microdata')): ?><meta itemprop="ratingValue" content="<?= (int) $r['rating'] ?>"><meta itemprop="bestRating" content="5"><?php endif; ?></div><?php endif; ?>
-            <?php if (!empty($r['title'])): ?><h3 class="review__title"<?= $mdOn ? md('itemprop="name"') : '' ?>><?= e($r['title']) ?></h3><?php endif; ?>
+            <?php if (!empty($r['title'])): ?><h2 class="review__title"<?= $mdOn ? md('itemprop="name"') : '' ?>><?= e($r['title']) ?></h2><?php endif; ?>
             <p<?= $mdOn ? md('itemprop="reviewBody"') : '' ?>><?= nl2br(e($r['text'])) ?></p>
             <footer><strong<?= $mdOn ? md('itemprop="author" itemscope itemtype="https://schema.org/Person"') : '' ?>><span<?= $mdOn ? md('itemprop="name"') : '' ?>><?= e($r['author'] !== '' ? $r['author'] : t('reviews.anonymous')) ?></span></strong><?php if ($r['location']): ?> · <?= e($r['location']) ?><?php endif; ?>
               · <time datetime="<?= e(substr((string) $r['created_at'], 0, 10)) ?>"><?= e(date(lang() === 'en' ? 'j M Y' : 'j. n. Y', strtotime((string) $r['created_at']))) ?></time>

@@ -3,8 +3,11 @@
 $services     = services();
 $concrete     = category_by_slug('betonove-sterky');
 $concreteSubs = $concrete ? subcategories((int) $concrete['id']) : [];
-$fullTitle    = $title ? $title . ' | ' . site('name') : site('name') . ' – ' . t('site.tagline');
-$logo         = image_url(props()['img.logo']['value_cs'] ?? '');
+$homeTitle    = trim(t('seo.home_title'));
+$fullTitle    = $title ? $title . ' | ' . site('name')
+              : (($homeTitle !== '' && $homeTitle !== 'seo.home_title') ? $homeTitle : site('name') . ' – ' . t('site.tagline'));
+$logoFile     = (string) (props()['img.logo']['value_cs'] ?? '');
+$logo         = image_url($logoFile);
 $favicon      = image_url(props()['img.favicon']['value_cs'] ?? '');
 $other        = lang() === 'en' ? 'cs' : 'en';
 $navLink = function (string $route, string $key) use ($current) {
@@ -28,7 +31,7 @@ $navLink = function (string $route, string $key) use ($current) {
 <?php endif; ?>
 <meta property="og:title" content="<?= e($fullTitle) ?>">
 <meta property="og:description" content="<?= e($metaDesc) ?>">
-<?php $ogAbs = abs_image(($ogImage ?? null) ?: ((string) (props()['seo.og_image']['value_cs'] ?? '') ?: null)); if ($ogAbs): ?><meta property="og:image" content="<?= e($ogAbs) ?>">
+<?php $ogAbs = abs_image(($ogImage ?? null) ?: ((string) (props()['seo.og_image']['value_cs'] ?? '') ?: ((string) (props()['img.hero']['value_cs'] ?? '') ?: ($logoFile ?: null)))); if ($ogAbs): ?><meta property="og:image" content="<?= e($ogAbs) ?>">
 <meta name="twitter:card" content="summary_large_image"><?php endif; ?>
 <meta property="og:type" content="website">
 <meta property="og:locale" content="<?= lang() === 'en' ? 'en_GB' : 'cs_CZ' ?>">
@@ -65,7 +68,7 @@ $navLink = function (string $route, string $key) use ($current) {
   <div class="container header__inner">
     <a href="<?= e(route_url('home')) ?>" class="logo">
       <?php if ($logo): ?>
-        <img src="<?= e($logo) ?>" alt="<?= e(site('name')) ?>" class="logo__img">
+        <img src="<?= e($logo) ?>" alt="<?= e(site('name')) ?>" class="logo__img"<?= img_dims($logoFile) ?>>
       <?php else: ?>
         <span class="logo__mark" aria-hidden="true"></span><span><?= e(site('name')) ?></span>
       <?php endif; ?>
@@ -121,14 +124,14 @@ $navLink = function (string $route, string $key) use ($current) {
   <div class="container footer__grid">
     <div>
       <?php if ($logo): ?>
-        <img src="<?= e($logo) ?>" alt="<?= e(site('name')) ?>" class="footer__logo" loading="lazy">
+        <img src="<?= e($logo) ?>" alt="<?= e(site('name')) ?>" class="footer__logo"<?= img_dims($logoFile) ?> loading="lazy">
       <?php else: ?>
         <div class="logo logo--light"><span class="logo__mark" aria-hidden="true"></span><span><?= e(site('name')) ?></span></div>
       <?php endif; ?>
       <p><?= te('site.tagline') ?></p>
     </div>
     <div>
-      <h4><?= te('footer.navigation') ?></h4>
+      <h2 class="footer__title"><?= te('footer.navigation') ?></h2>
       <ul>
         <li><a href="<?= e(route_url('references')) ?>"><?= te('nav.references') ?></a></li>
         <li><a href="<?= e(route_url('reviews')) ?>"><?= te('nav.reviews') ?></a></li>
@@ -138,7 +141,7 @@ $navLink = function (string $route, string $key) use ($current) {
     </div>
     <?php $ap = address_parts(); ?>
     <div<?= rdfa('vocab="https://schema.org/" typeof="HomeAndConstructionBusiness" resource="' . e(business_id()) . '"') ?>>
-      <h4><?= te('footer.contact') ?></h4>
+      <h2 class="footer__title"><?= te('footer.contact') ?></h2>
       <?php if (schema_on('rdfa')): ?><meta property="name" content="<?= e(site('name')) ?>"><link property="url" href="<?= e(abs_url(route_url('home'))) ?>"><?php endif; ?>
       <ul>
         <li class="has-icon"><?= icon('phone', 16) ?><a href="<?= e(tel_href(site('phone'))) ?>"<?= rdfa('property="telephone" content="' . e(site('phone')) . '"') ?>><?= e(site('phone')) ?></a></li>

@@ -137,7 +137,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
 
 // ---------- Přehled faktur ----------
 if (isset($_GET['list'])):
-    $rows = q("SELECT * FROM invoices ORDER BY id DESC LIMIT 500")->fetchAll();
+    // ---------- filtr a hledání (stejný filtr platí pro export do Excelu) ----------
+    $f = [
+        'q'      => mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 100),
+        'status' => in_array($_GET['status'] ?? '', ['unpaid', 'overdue', 'paid'], true) ? $_GET['status'] : '',
+        'kind'   => in_array($_GET['kind'] ?? '', ['invoice', 'deposit'], true) ? $_GET['kind'] : '',
+        'from'   => inv_iso((string) ($_GET['from'] ?? '')),
+        'to'     => inv_iso((string) ($_GET['to'] ?? '')),
+    ];
+    $where = []; $par = [];
+    if ($f['q'] !== '') { $where[] = '(number LIKE ? OR data LIKE ?)'; array_push($par, '%' . $f['q'] . '%', '%' . $f['q'] . '%'); }
+    if ($f['status'] === 'paid')    $where[] = 'paid_at IS NOT NULL';
+    if ($f['status'] === 'unpaid')  $where[] = 'paid_at IS NULL';
+    if ($f['status'] === 'overdue') { $where[] = 'paid_at IS NULL AND due < ?'; $par[] = date('Y-m-d'); }
+    if ($f['kind'] === 'deposit')   $where[] = "data LIKE '%\"kind\":\"deposit\"%'";
+    if ($f['kind'] === 'invoice')   $where[] = "data NOT LIKE '%\"kind\":\"deposit\"%'";
+    if ($f['from'] !== '') { $where[] = 'issued >= ?'; $par[] = $f['from']; }
+    if ($f['to'] !== '')   { $where[] = 'issued <= ?'; $par[] = $f['to']; }
+    $rows = q("SELECT * FROM invoices" . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . " ORDER BY issued DESC, id DESC LIMIT 2000", $par)->fetchAll();
+    $active = array_filter($f, fn($v) => $v !== '');
+    $qsF = fn(array $extra = []) => $self . '?' . http_build_query(['list' => 1] + $active + $extra);
+
+    // rozpočet faktury: základ, DPH, celkem, záloha, k úhradě
+    $calc = function (array $r) use ($vatPayer): array {
+        $d = (array) json_decode((string) $r['data'], true);
+        $dep = ($d['kind'] ?? '') === 'deposit';
+        $items = array_map(fn($it) => ['qty' => inv_num((string) ($it['qty'] ?? '1')) ?: 1, 'price' => inv_num((string) ($it['price'] ?? '0')), 'vat' => (int) ($it['vat'] ?? 0)], (array) ($d['items'] ?? []));
+        $tot = inv_totals($items, inv_num((string) ($d['paid_deposit'] ?? '0')), $vatPayer && !$dep);
+        $base = array_sum(array_column($tot['rates'], 'base'));
+        $vat  = array_sum(array_column($tot['rates'], 'vat'));
+        return ['d' => $d, 'dep' => $dep, 'base' => $base, 'vat' => $vat, 'total' => $tot['total'], 'due' => (float) $r['total'],
+                'over' => !$r['paid_at'] && $r['due'] < date('Y-m-d')];
+    };
+
+    if (($_GET['export'] ?? '') === 'xlsx') {
+        require_once ROOT_DIR . '/includes/xlsx.php';
+        $contracts = [];
+        foreach (q("SELECT id, number FROM contracts")->fetchAll() as $c) $contracts[(int) $c['id']] = $c['number'];
+        $out = [];
+        foreach ($rows as $r) {
+            $c = $calc($r); $d = $c['d'];
+            $out[] = [['s' => $r['number']], ['s' => t($c['dep'] ? 'adm.invoice.title_deposit' : 'adm.invoice.title')], ['s' => (string) ($d['client_name'] ?? '')],
+                      ['s' => (string) ($d['client_ico'] ?? '')], ['s' => (string) ($d['client_dic'] ?? '')], ['s' => (string) ($d['client_email'] ?? '')],
+                      ['d' => (string) $r['issued']], $c['dep'] ? null : ['d' => (string) ($d['taxable'] ?? '')], ['d' => (string) $r['due']],
+                      ['n' => $c['base']], ['n' => $c['vat']], ['n' => $c['total']], ['n' => inv_num((string) ($d['paid_deposit'] ?? '0'))], ['n' => $c['due']],
+                      $r['paid_at'] ? ['d' => (string) $r['paid_at']] : null,
+                      ['s' => t($r['paid_at'] ? 'adm.invoice.paid_badge' : ($c['over'] ? 'adm.invoice.overdue' : 'adm.invoice.unpaid'))],
+                      ['s' => $contracts[(int) $r['contract_id']] ?? ''], $r['inquiry_id'] ? ['n' => (int) $r['inquiry_id']] : null];
+        }
+        $head = array_map('t', ['adm.invoice.th_number', 'adm.invoice.x_kind', 'adm.invoice.th_client', 'adm.invoice.x_ico', 'adm.invoice.x_dic', 'adm.invoice.x_email',
+            'adm.invoice.th_issued', 'adm.invoice.x_taxable', 'adm.invoice.th_due', 'adm.invoice.x_base', 'adm.invoice.x_vat', 'adm.invoice.x_total',
+            'adm.invoice.x_deposit', 'adm.invoice.th_amount', 'adm.invoice.x_paid_on', 'adm.invoice.x_state', 'adm.invoice.contract', 'adm.invoice.x_inquiry']);
+        xlsx_download('faktury-' . date('Y-m-d'), t('adm.invoice.list_title'), $head, $out);
+    }
+
+    $sum = ['n' => count($rows), 'due' => 0.0, 'unpaid' => 0.0, 'over' => 0.0];
+    $calcs = [];
+    foreach ($rows as $r) {
+        $c = $calcs[$r['id']] = $calc($r);
+        $sum['due'] += $c['due'];
+        if (!$r['paid_at']) $sum['unpaid'] += $c['due'];
+        if ($c['over']) $sum['over'] += $c['due'];
+    }
 ?><!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title><?= te('adm.invoice.list_title') ?> | <?= te('adm.title') ?></title>
@@ -146,17 +207,51 @@ if (isset($_GET['list'])):
 </head><body class="admin">
 <?= admin_menu('invoices') ?><main class="container admin-main">
   <h1><?= te('adm.invoice.list_title') ?></h1>
-  <?php if (!$rows): ?><p class="muted"><?= te('adm.invoice.list_empty') ?></p><?php else: ?>
-  <div class="table-wrap"><table class="table">
-    <tr><th><?= te('adm.invoice.th_number') ?></th><th><?= te('adm.invoice.th_client') ?></th><th><?= te('adm.invoice.th_issued') ?></th><th><?= te('adm.invoice.th_due') ?></th><th><?= te('adm.invoice.th_amount') ?></th><th></th></tr>
-    <?php foreach ($rows as $r): $rd = (array) json_decode($r['data'], true); $over = !$r['paid_at'] && $r['due'] < date('Y-m-d'); ?>
+
+  <form method="get" class="form inv-filter" role="search">
+    <input type="hidden" name="list" value="1">
+    <label class="field inv-filter__q"><?= te('adm.invoice.search') ?>
+      <input type="search" name="q" value="<?= e($f['q']) ?>" placeholder="<?= te('adm.invoice.search_ph') ?>"></label>
+    <label class="field"><?= te('adm.invoice.f_state') ?>
+      <select name="status">
+        <?php foreach (['' => 'adm.invoice.all', 'unpaid' => 'adm.invoice.unpaid', 'overdue' => 'adm.invoice.overdue', 'paid' => 'adm.invoice.paid_badge'] as $k => $l): ?>
+          <option value="<?= $k ?>"<?= $f['status'] === $k ? ' selected' : '' ?>><?= te($l) ?></option>
+        <?php endforeach; ?>
+      </select></label>
+    <label class="field"><?= te('adm.invoice.x_kind') ?>
+      <select name="kind">
+        <?php foreach (['' => 'adm.invoice.all', 'invoice' => 'adm.invoice.title', 'deposit' => 'adm.invoice.title_deposit'] as $k => $l): ?>
+          <option value="<?= $k ?>"<?= $f['kind'] === $k ? ' selected' : '' ?>><?= te($l) ?></option>
+        <?php endforeach; ?>
+      </select></label>
+    <label class="field"><?= te('adm.invoice.f_from') ?><input type="date" name="from" value="<?= e($f['from']) ?>"></label>
+    <label class="field"><?= te('adm.invoice.f_to') ?><input type="date" name="to" value="<?= e($f['to']) ?>"></label>
+    <div class="inv-filter__actions">
+      <button class="btn btn--small"><?= te('adm.invoice.filter') ?></button>
+      <?php if ($active): ?><a class="btn btn--small btn--ghost" href="<?= e($self . '?list=1') ?>"><?= te('adm.invoice.reset') ?></a><?php endif; ?>
+      <a class="btn btn--small btn--ghost" href="<?= e($qsF(['export' => 'xlsx'])) ?>"><?= te('adm.invoice.export') ?></a>
+    </div>
+  </form>
+
+  <dl class="inv-sum">
+    <div><dt><?= te('adm.invoice.sum_count') ?></dt><dd><?= (int) $sum['n'] ?></dd></div>
+    <div><dt><?= te('adm.invoice.sum_total') ?></dt><dd><?= inv_money($sum['due']) ?></dd></div>
+    <div><dt><?= te('adm.invoice.unpaid') ?></dt><dd><?= inv_money($sum['unpaid']) ?></dd></div>
+    <div class="<?= $sum['over'] > 0 ? 'is-over' : '' ?>"><dt><?= te('adm.invoice.overdue') ?></dt><dd><?= inv_money($sum['over']) ?></dd></div>
+  </dl>
+
+  <?php if (!$rows): ?><p class="muted"><?= te($active ? 'adm.invoice.no_match' : 'adm.invoice.list_empty') ?></p><?php else: ?>
+  <div class="table-wrap"><table class="table inv-table">
+    <tr><th><?= te('adm.invoice.th_number') ?></th><th><?= te('adm.invoice.th_client') ?></th><th><?= te('adm.invoice.th_issued') ?></th><th><?= te('adm.invoice.th_due') ?></th><th class="r"><?= te('adm.invoice.th_amount') ?></th><th><?= te('adm.invoice.x_state') ?></th></tr>
+    <?php foreach ($rows as $r): $c = $calcs[$r['id']]; $rd = $c['d']; ?>
       <tr>
-        <td><a href="<?= e($self . '?id=' . $r['id']) ?>"><strong><?= e($r['number']) ?></strong></a><?= ($rd['kind'] ?? '') === 'deposit' ? ' <span class="badge">' . te('adm.invoice.kind_deposit_short') . '</span>' : '' ?></td>
-        <td><?= e($rd['client_name'] ?? '') ?></td>
+        <td><a href="<?= e($self . '?id=' . $r['id']) ?>"><strong><?= e($r['number']) ?></strong></a><?= $c['dep'] ? ' <span class="badge">' . te('adm.invoice.kind_deposit_short') . '</span>' : '' ?></td>
+        <td><?= e($rd['client_name'] ?? '') ?><?= !empty($rd['client_email']) ? '<br><span class="muted">' . e($rd['client_email']) . '</span>' : '' ?></td>
         <td><?= e(inv_date((string) $r['issued'])) ?></td>
-        <td<?= $over ? ' style="color:#a3321f;font-weight:700"' : '' ?>><?= e(inv_date((string) $r['due'])) ?></td>
-        <td style="white-space:nowrap"><?= inv_money((float) $r['total']) ?></td>
-        <td><?= $r['paid_at'] ? '<span class="badge">' . te('adm.invoice.paid_badge') . '</span>' : ($over ? '<span class="muted">' . te('adm.invoice.overdue') . '</span>' : '') ?></td>
+        <td<?= $c['over'] ? ' class="is-over"' : '' ?>><?= e(inv_date((string) $r['due'])) ?></td>
+        <td class="r"><?= inv_money($c['due']) ?></td>
+        <td><?= $r['paid_at'] ? '<span class="badge">' . te('adm.invoice.paid_badge') . '</span> <span class="muted">' . e(inv_date((string) $r['paid_at'])) . '</span>'
+                : ($c['over'] ? '<span class="is-over">' . te('adm.invoice.overdue') . '</span>' : '<span class="muted">' . te('adm.invoice.unpaid') . '</span>') ?></td>
       </tr>
     <?php endforeach; ?>
   </table></div>

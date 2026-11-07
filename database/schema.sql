@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS customers;
 -- Tabulky customers, inquiry_messages a nové texty doplní web sám při prvním načtení (includes/migrate.php + migrate.sql).
 DROP TABLE IF EXISTS properties;
 DROP TABLE IF EXISTS form_fields;
+DROP TABLE IF EXISTS calendar_events;
 DROP TABLE IF EXISTS inquiry_files;
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS contracts;
@@ -181,6 +182,20 @@ CREATE TABLE inquiry_files (
   size        INT UNSIGNED NOT NULL DEFAULT 0,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_file_inquiry (inquiry_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci;
+
+CREATE TABLE calendar_events (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  inquiry_id  INT UNSIGNED NULL,
+  title       VARCHAR(200) NOT NULL,
+  starts      DATE NOT NULL,
+  ends        DATE NULL,
+  time_from   TIME NULL,
+  time_to     TIME NULL,
+  place       VARCHAR(200) NULL,
+  note        TEXT NULL,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_event_starts (starts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci;
 
 CREATE TABLE admin_users (
@@ -915,3 +930,61 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.mail.log_title', 'adm', 'line', NULL, 'Průběh odeslání na {email}', '', 983),
 ('adm.mail.test_send', 'adm', 'line', NULL, 'Odeslat zkušební e-mail', '', 984),
 ('adm.mail.test_to', 'adm', 'line', NULL, 'Poslat zkušební e-mail na adresu', '', 985);
+
+-- v21: vlastní události v kalendáři, propojení s Google Kalendářem
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.cal.add', 'adm', 'line', NULL, '+ Přidat událost', '', 1000),
+('adm.cal.add_on', 'adm', 'line', NULL, 'Přidat událost na {date}', '', 1001),
+('adm.cal.cancel', 'adm', 'line', NULL, 'Zavřít', '', 1002),
+('adm.cal.copied', 'adm', 'line', NULL, 'Zkopírováno', '', 1003),
+('adm.cal.copy', 'adm', 'line', NULL, 'Kopírovat', '', 1004),
+('adm.cal.deleted', 'adm', 'line', NULL, 'Událost smazána.', '', 1005),
+('adm.cal.edit_event', 'adm', 'line', NULL, 'Upravit událost', '', 1006),
+('adm.cal.err_required', 'adm', 'line', NULL, 'Vyplňte název a datum události.', '', 1007),
+('adm.cal.f_from', 'adm', 'line', NULL, 'Datum', '', 1008),
+('adm.cal.f_inquiry', 'adm', 'line', NULL, 'Poptávka', '', 1009),
+('adm.cal.f_note', 'adm', 'line', NULL, 'Poznámka', '', 1010),
+('adm.cal.f_place', 'adm', 'line', NULL, 'Místo', '', 1011),
+('adm.cal.f_time_from', 'adm', 'line', NULL, 'Čas od', '', 1012),
+('adm.cal.f_time_to', 'adm', 'line', NULL, 'Čas do', '', 1013),
+('adm.cal.f_title', 'adm', 'line', NULL, 'Název', '', 1014),
+('adm.cal.f_title_ph', 'adm', 'line', NULL, 'např. Zaměření – Nováková, Brno', '', 1015),
+('adm.cal.f_to', 'adm', 'line', NULL, 'Do (u vícedenní události)', '', 1016),
+('adm.cal.legend_event', 'adm', 'line', NULL, 'Vlastní událost', '', 1017),
+('adm.cal.new_event', 'adm', 'line', NULL, 'Nová událost', '', 1018),
+('adm.cal.saved', 'adm', 'line', NULL, 'Událost uložena.', '', 1019),
+('adm.cal.sync_intro', 'adm', 'line', NULL, 'Zakázky ze smluv a vlastní události se mohou samy zobrazovat ve vašem Google Kalendáři – i v telefonu. Stačí jednou přidat tento soukromý odkaz:', '', 1020),
+('adm.cal.sync_note', 'adm', 'line', NULL, 'Odkaz je tajný – kdo ho zná, vidí termíny a jména zákazníků. Propojení je jednosměrné: události přidávejte a měňte tady na webu.', '', 1021),
+('adm.cal.sync_step1', 'adm', 'html', NULL, 'Otevřete <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank" rel="noopener">Google Kalendář → Přidat kalendář → Z adresy URL</a>.', '', 1022),
+('adm.cal.sync_step2', 'adm', 'line', NULL, 'Vložte zkopírovaný odkaz a klikněte na „Přidat kalendář“.', '', 1023),
+('adm.cal.sync_step3', 'adm', 'line', NULL, 'Kalendář se objeví v levém sloupci. Google ho obnovuje sám, obvykle během několika hodin.', '', 1024),
+('adm.cal.sync_title', 'adm', 'line', NULL, 'Propojení s Google Kalendářem', '', 1025),
+('adm.cal.to_google', 'adm', 'line', NULL, 'Přidat do Google Kalendáře', '', 1026);
+
+-- v22: faktury – hledání, filtr, export do Excelu
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.invoice.all', 'adm', 'line', NULL, 'Vše', '', 1100),
+('adm.invoice.export', 'adm', 'line', NULL, 'Export do Excelu', '', 1101),
+('adm.invoice.f_from', 'adm', 'line', NULL, 'Vystaveno od', '', 1102),
+('adm.invoice.f_state', 'adm', 'line', NULL, 'Stav', '', 1103),
+('adm.invoice.f_to', 'adm', 'line', NULL, 'Vystaveno do', '', 1104),
+('adm.invoice.filter', 'adm', 'line', NULL, 'Filtrovat', '', 1105),
+('adm.invoice.no_match', 'adm', 'line', NULL, 'Filtru neodpovídá žádná faktura.', '', 1106),
+('adm.invoice.reset', 'adm', 'line', NULL, 'Zrušit filtr', '', 1107),
+('adm.invoice.search', 'adm', 'line', NULL, 'Hledat', '', 1108),
+('adm.invoice.search_ph', 'adm', 'line', NULL, 'číslo faktury, jméno nebo e-mail odběratele', '', 1109),
+('adm.invoice.sum_count', 'adm', 'line', NULL, 'Počet faktur', '', 1110),
+('adm.invoice.sum_total', 'adm', 'line', NULL, 'K úhradě celkem', '', 1111),
+('adm.invoice.unpaid', 'adm', 'line', NULL, 'nezaplaceno', '', 1112),
+('adm.invoice.x_base', 'adm', 'line', NULL, 'Základ DPH', '', 1113),
+('adm.invoice.x_deposit', 'adm', 'line', NULL, 'Uhrazeno zálohou', '', 1114),
+('adm.invoice.x_dic', 'adm', 'line', NULL, 'DIČ', '', 1115),
+('adm.invoice.x_email', 'adm', 'line', NULL, 'E-mail', '', 1116),
+('adm.invoice.x_ico', 'adm', 'line', NULL, 'IČO', '', 1117),
+('adm.invoice.x_inquiry', 'adm', 'line', NULL, 'Poptávka č.', '', 1118),
+('adm.invoice.x_kind', 'adm', 'line', NULL, 'Druh', '', 1119),
+('adm.invoice.x_paid_on', 'adm', 'line', NULL, 'Zaplaceno dne', '', 1120),
+('adm.invoice.x_state', 'adm', 'line', NULL, 'Stav', '', 1121),
+('adm.invoice.x_taxable', 'adm', 'line', NULL, 'DUZP', '', 1122),
+('adm.invoice.x_total', 'adm', 'line', NULL, 'Celkem s DPH', '', 1123),
+('adm.invoice.x_vat', 'adm', 'line', NULL, 'DPH', '', 1124);

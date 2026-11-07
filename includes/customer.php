@@ -163,7 +163,16 @@ function send_mail(string $to, string $subject, string $body, ?string $replyTo =
     if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers .= "Reply-To: {$replyTo}\r\n";
     if (smtp_on()) {                                       // SMTP z config.php (includes/mailer.php)
         $sender = filter_var((string) ($CONFIG['smtp']['from'] ?? ''), FILTER_VALIDATE_EMAIL) ?: $from;
-        return smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null);
+        if (smtp_send($to, $subject, $body, $sender, site('name'), $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : null)) return true;
+        // SMTP server nedostupný (hosting blokuje port apod.) → záložně přes PHP mail(), ať se e-mail neztratí.
+        // Při jiné chybě (špatné heslo, odmítnutý odesílatel) se záloha nepoužije – chybu je potřeba opravit.
+        if (!str_starts_with(smtp_error(), 'připojení k')) return false;
+        $log = smtp_log();
+        $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
+        smtp_log(null, true);
+        foreach ($log as $line) smtp_log(substr($line, 10));
+        smtp_log('záloha: PHP mail() → ' . $to . ': ' . ($ok ? 'předáno serveru k odeslání' : 'CHYBA – server e-mail nepřijal'));
+        return $ok;
     }
     smtp_log(null, true);
     $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', str_replace("\r", '', $body), $headers);
