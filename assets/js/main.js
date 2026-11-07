@@ -1,0 +1,99 @@
+(function () {
+  // Chráněné e-maily: data-m = base64 adresy pozpátku
+  document.querySelectorAll('a[data-m]').forEach(function (a) {
+    try {
+      var m = atob(a.getAttribute('data-m')).split('').reverse().join('');
+      a.href = 'mailto:' + m;
+      a.textContent = m;
+      a.removeAttribute('data-m');
+    } catch (e) {}
+  });
+
+  // Mapa až po kliknutí (bez cookies Googlu předem)
+  document.querySelectorAll('[data-map-src]').forEach(function (box) {
+    var btn = box.querySelector('button');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.className = 'map';
+      f.src = box.getAttribute('data-map-src');
+      f.title = box.getAttribute('data-map-title') || '';
+      f.loading = 'lazy';
+      f.referrerPolicy = 'no-referrer-when-downgrade';
+      box.replaceWith(f);
+    });
+  });
+
+  // Mobilní menu
+  var toggle = document.querySelector('.nav-toggle');
+  var nav = document.getElementById('nav');
+  function setNav(open) {
+    nav.classList.toggle('is-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.classList.toggle('nav-open', open);
+  }
+  if (toggle && nav) {
+    toggle.addEventListener('click', function () { setNav(!nav.classList.contains('is-open')); });
+    window.addEventListener('resize', function () { if (window.innerWidth > 960) setNav(false); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && nav.classList.contains('is-open')) setNav(false); });
+  }
+  // Rozbalovací podmenu na mobilu
+  document.querySelectorAll('.sub-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var li = btn.closest('.has-sub');
+      var open = li.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  // Lightbox galerie (klávesnice + swipe)
+  var box = document.querySelector('.lightbox');
+  if (!box) return;
+  var img = box.querySelector('img');
+  var cap = box.querySelector('figcaption');
+  var items = [];
+  var idx = 0;
+  var lastFocus = null;
+
+  function show(i) {
+    idx = (i + items.length) % items.length;
+    img.src = items[idx].href;
+    img.alt = cap.textContent = items[idx].dataset.caption || '';
+  }
+  function close() {
+    box.hidden = true; img.src = '';
+    document.body.style.overflow = '';
+    if (lastFocus) lastFocus.focus();
+  }
+
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest('[data-lightbox]');
+    if (!a) return;
+    ev.preventDefault();
+    lastFocus = a;
+    var gallery = a.closest('.gallery');
+    items = Array.prototype.slice.call((gallery || document).querySelectorAll('[data-lightbox]'));
+    box.hidden = false;
+    document.body.style.overflow = 'hidden';
+    show(items.indexOf(a));
+    box.querySelector('.lightbox__close').focus();
+  });
+  box.querySelector('.lightbox__close').addEventListener('click', close);
+  box.querySelector('.lightbox__prev').addEventListener('click', function () { show(idx - 1); });
+  box.querySelector('.lightbox__next').addEventListener('click', function () { show(idx + 1); });
+  box.addEventListener('click', function (ev) { if (ev.target === box) close(); });
+  document.addEventListener('keydown', function (ev) {
+    if (box.hidden) return;
+    if (ev.key === 'Escape') close();
+    if (ev.key === 'ArrowLeft') show(idx - 1);
+    if (ev.key === 'ArrowRight') show(idx + 1);
+  });
+  var x0 = null;
+  box.addEventListener('touchstart', function (ev) { x0 = ev.touches[0].clientX; }, { passive: true });
+  box.addEventListener('touchend', function (ev) {
+    if (x0 === null) return;
+    var dx = ev.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+})();

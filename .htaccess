@@ -1,0 +1,18 @@
+Options -Indexes
+AddDefaultCharset UTF-8
+
+# Vlastní stránka 404 i pro chybějící soubory (v podadresáři: ErrorDocument 404 /betonovesterky/404.php)
+ErrorDocument 404 /404.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Pokud je web v podadresáři, nastavte např.: RewriteBase /betonovesterky/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Zákaz přímého přístupu k interním souborům
+<FilesMatch "^(config\.php|.*\.sql|README\.md)$">
+  Require all denied
+</FilesMatch>
