@@ -304,6 +304,9 @@ function stars(int $n): string
 // Poptávkový formulář – pole z tabulky form_fields
 // ---------------------------------------------------------------
 
+/** Základní pole poptávky – ukládají se i do sloupců tabulky inquiries, v administraci je nelze smazat */
+const FORM_SYSTEM_FIELDS = ['name', 'email', 'phone', 'location', 'message'];
+
 function form_fields(): array
 {
     return q("SELECT * FROM form_fields WHERE is_active = 1 ORDER BY sort, id")->fetchAll();

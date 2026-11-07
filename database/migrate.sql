@@ -245,7 +245,7 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.form.f_key', 'adm', 'line', NULL, 'Klíč', '', 80),
 ('adm.form.f_key_ph', 'adm', 'line', NULL, 'automaticky', '', 81),
 ('adm.form.f_label', 'adm', 'line', NULL, 'Popisek', '', 82),
-('adm.form.f_options', 'adm', 'line', NULL, 'Možnosti (select)', '', 83),
+('adm.form.f_options', 'adm', 'line', NULL, 'Možnosti výběru', '', 83),
 ('adm.form.f_placeholder', 'adm', 'line', NULL, 'Nápověda v poli', '', 84),
 ('adm.form.f_required', 'adm', 'line', NULL, 'Povinné', '', 85),
 ('adm.form.f_wide', 'adm', 'line', NULL, 'Celá šířka', '', 86),
@@ -640,3 +640,16 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 -- v18: zrušené texty Facebook pluginu, zásady podle stahování příspěvků serverem
 DELETE FROM properties WHERE pkey IN ('home.fb_load', 'home.fb_note');
 UPDATE properties SET value_cs = REPLACE(value_cs, '<p>Příspěvky z Facebooku na úvodní stránce se načtou až po vašem kliknutí. Teprve potom společnost Meta Platforms Ireland Ltd. získá vaši IP adresu a může ukládat cookies podle svých <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">zásad ochrany soukromí</a>.</p>', '<p>Příspěvky z Facebooku na úvodní stránce stahuje přímo náš server – váš prohlížeč se při jejich zobrazení k Facebooku nepřipojuje a Facebook se o vaší návštěvě nedozví. Až po kliknutí na odkaz „Sledovat na Facebooku“ přejdete na Facebook, kde platí jeho <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">zásady ochrany soukromí</a>.</p>'), value_en = REPLACE(value_en, '<p>Facebook posts on the home page load only after you click. Only then does Meta Platforms Ireland Ltd. receive your IP address and may set cookies under its <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">privacy policy</a>.</p>', '<p>Facebook posts on the home page are fetched directly by our server – your browser does not connect to Facebook when viewing them, so Facebook does not learn about your visit. Only the “Follow on Facebook” link takes you to Facebook, where its <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">privacy policy</a> applies.</p>') WHERE pkey = 'privacy.body';
+
+-- v19: zjednodušený editor formuláře
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.form.add_title', 'adm', 'line', NULL, '+ Přidat pole', '', 950),
+('adm.form.advanced', 'adm', 'line', NULL, 'Pokročilé', '', 951),
+('adm.form.err_system', 'adm', 'line', NULL, 'Jméno a e-mail jsou vždy povinné a zobrazené; základní pole nelze smazat.', '', 952),
+('adm.form.hidden_state', 'adm', 'line', NULL, 'Skryto', '', 953),
+('adm.form.intro', 'adm', 'line', NULL, 'Pole poptávkového formuláře na stránkách Kontakt a Ceník – v pořadí, v jakém je uvidí zákazník.', '', 954),
+('adm.form.key_locked', 'adm', 'line', NULL, 'Základní pole – klíč nelze změnit.', '', 955),
+('adm.form.options_hint', 'adm', 'line', NULL, 'jedna možnost na řádek', '', 956),
+('adm.form.system_note', 'adm', 'line', NULL, 'Základní pole se ukládá i do přehledu poptávek, proto ho nelze smazat – můžete ho jen skrýt nebo přejmenovat.', '', 957),
+('adm.form.visible', 'adm', 'line', NULL, 'Zobrazeno', '', 958);
+UPDATE properties SET value_cs = 'Možnosti výběru' WHERE pkey = 'adm.form.f_options' AND value_cs = 'Možnosti (select)';

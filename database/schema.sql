@@ -521,7 +521,7 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.form.f_key', 'adm', 'line', NULL, 'Klíč', '', 80),
 ('adm.form.f_key_ph', 'adm', 'line', NULL, 'automaticky', '', 81),
 ('adm.form.f_label', 'adm', 'line', NULL, 'Popisek', '', 82),
-('adm.form.f_options', 'adm', 'line', NULL, 'Možnosti (select)', '', 83),
+('adm.form.f_options', 'adm', 'line', NULL, 'Možnosti výběru', '', 83),
 ('adm.form.f_placeholder', 'adm', 'line', NULL, 'Nápověda v poli', '', 84),
 ('adm.form.f_required', 'adm', 'line', NULL, 'Povinné', '', 85),
 ('adm.form.f_wide', 'adm', 'line', NULL, 'Celá šířka', '', 86),
@@ -894,3 +894,15 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.inq.view', 'adm', 'line', NULL, 'Zobrazení', '', 908),
 ('adm.inq.view_cal', 'adm', 'line', NULL, 'Kalendář', '', 909),
 ('adm.inq.view_list', 'adm', 'line', NULL, 'Seznam', '', 910);
+
+-- v19: zjednodušený editor formuláře
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('adm.form.add_title', 'adm', 'line', NULL, '+ Přidat pole', '', 950),
+('adm.form.advanced', 'adm', 'line', NULL, 'Pokročilé', '', 951),
+('adm.form.err_system', 'adm', 'line', NULL, 'Jméno a e-mail jsou vždy povinné a zobrazené; základní pole nelze smazat.', '', 952),
+('adm.form.hidden_state', 'adm', 'line', NULL, 'Skryto', '', 953),
+('adm.form.intro', 'adm', 'line', NULL, 'Pole poptávkového formuláře na stránkách Kontakt a Ceník – v pořadí, v jakém je uvidí zákazník.', '', 954),
+('adm.form.key_locked', 'adm', 'line', NULL, 'Základní pole – klíč nelze změnit.', '', 955),
+('adm.form.options_hint', 'adm', 'line', NULL, 'jedna možnost na řádek', '', 956),
+('adm.form.system_note', 'adm', 'line', NULL, 'Základní pole se ukládá i do přehledu poptávek, proto ho nelze smazat – můžete ho jen skrýt nebo přejmenovat.', '', 957),
+('adm.form.visible', 'adm', 'line', NULL, 'Zobrazeno', '', 958);

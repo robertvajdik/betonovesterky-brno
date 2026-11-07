@@ -188,22 +188,53 @@ if ($logged && $action !== '') {
         case 'field_save':
             $types = ['text','email','tel','number','textarea','select','checkbox','date'];
             $type  = in_array($_POST['type'] ?? '', $types, true) ? $_POST['type'] : 'text';
-            $fkey  = str_replace('-', '_', slugify(post('fkey', 40) ?: post('label_cs', 160)));
-            if ($fkey === '') back('tab=form', t('adm.form.err_name'));
-            $vals = [$fkey, $type, post('label_cs', 160), nn(post('label_en', 160)), nn(post('placeholder_cs', 200)), nn(post('placeholder_en', 200)),
-                     nn(post('options_cs', 5000)), nn(post('options_en', 5000)), !empty($_POST['is_required']) ? 1 : 0,
-                     !empty($_POST['is_wide']) ? 1 : 0, !empty($_POST['is_active']) ? 1 : 0, (int) ($_POST['sort'] ?? 0)];
+            $old   = $id ? q("SELECT * FROM form_fields WHERE id = ?", [$id])->fetch() : null;
+            if ($id && !$old) back('tab=form');
+            $label = post('label_cs', 160);
+            // základní pole (jméno, e-mail…) si drží klíč – ukládají se podle něj do přehledu poptávek
+            $fkey  = $old && in_array($old['fkey'], FORM_SYSTEM_FIELDS, true) ? $old['fkey']
+                   : str_replace('-', '_', slugify(post('fkey', 40) ?: ($old['fkey'] ?? '') ?: $label));
+            if ($label === '' || $fkey === '') back('tab=form' . ($id ? "#f$id" : ''), t('adm.form.err_name'));
+            if ($old && in_array($old['fkey'], ['name', 'email'], true)) $type = $old['type'];
+            $hasPh  = !in_array($type, ['select', 'checkbox', 'date'], true);
+            $hasOpt = $type === 'select';
+            $vals = [$fkey, $type, $label, nn(post('label_en', 160)),
+                     $hasPh ? nn(post('placeholder_cs', 200)) : null, $hasPh ? nn(post('placeholder_en', 200)) : null,
+                     $hasOpt ? nn(post('options_cs', 5000)) : null, $hasOpt ? nn(post('options_en', 5000)) : null,
+                     isset($_POST['is_required']) ? (!empty($_POST['is_required']) ? 1 : 0) : (int) ($old['is_required'] ?? 0),
+                     (($_POST['is_wide'] ?? '') !== '') ? (!empty($_POST['is_wide']) ? 1 : 0) : (int) ($old['is_wide'] ?? ($type === 'textarea' ? 1 : 0))];
             try {
-                if ($id) {
-                    q("UPDATE form_fields SET fkey=?, type=?, label_cs=?, label_en=?, placeholder_cs=?, placeholder_en=?, options_cs=?, options_en=?, is_required=?, is_wide=?, is_active=?, sort=? WHERE id=?", [...$vals, $id]);
+                if ($old) {
+                    q("UPDATE form_fields SET fkey=?, type=?, label_cs=?, label_en=?, placeholder_cs=?, placeholder_en=?, options_cs=?, options_en=?, is_required=?, is_wide=? WHERE id=?", [...$vals, $id]);
                 } else {
-                    q("INSERT INTO form_fields (fkey, type, label_cs, label_en, placeholder_cs, placeholder_en, options_cs, options_en, is_required, is_wide, is_active, sort) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", $vals);
+                    $sort = (int) q("SELECT COALESCE(MAX(sort), 0) + 10 FROM form_fields")->fetchColumn();
+                    q("INSERT INTO form_fields (fkey, type, label_cs, label_en, placeholder_cs, placeholder_en, options_cs, options_en, is_required, is_wide, is_active, sort) VALUES (?,?,?,?,?,?,?,?,?,?,1,?)", [...$vals, $sort]);
+                    $id = (int) db()->lastInsertId();
                 }
             } catch (PDOException $ex) {
                 back('tab=form', t('adm.form.err_exists'));
             }
-            back('tab=form', t('adm.form.saved'));
+            back("tab=form#f$id", t('adm.form.saved'));
+        case 'field_toggle':
+            // rychlé přepínače v seznamu: povinné / zobrazeno (jméno a e-mail zůstávají vždy povinné a zobrazené)
+            $f   = q("SELECT * FROM form_fields WHERE id = ?", [$id])->fetch();
+            $col = ($_POST['what'] ?? '') === 'active' ? 'is_active' : 'is_required';
+            if (!$f || in_array($f['fkey'], ['name', 'email'], true)) back("tab=form#f$id", t('adm.form.err_system'));
+            q("UPDATE form_fields SET $col = 1 - $col WHERE id = ?", [$id]);
+            back("tab=form#f$id");
+        case 'field_move':
+            // posun o jedno místo nahoru / dolů; pořadí se přečísluje po 10
+            $ids = array_map('intval', q("SELECT id FROM form_fields ORDER BY sort, id")->fetchAll(PDO::FETCH_COLUMN));
+            $pos = array_search($id, $ids, true);
+            $to  = $pos === false ? false : $pos + (($_POST['dir'] ?? '') === 'up' ? -1 : 1);
+            if ($to !== false && isset($ids[$to])) {
+                [$ids[$pos], $ids[$to]] = [$ids[$to], $ids[$pos]];
+                foreach ($ids as $i => $fid) q("UPDATE form_fields SET sort = ? WHERE id = ?", [($i + 1) * 10, $fid]);
+            }
+            back("tab=form#f$id");
         case 'field_delete':
+            $f = q("SELECT fkey FROM form_fields WHERE id = ?", [$id])->fetch();
+            if ($f && in_array($f['fkey'], FORM_SYSTEM_FIELDS, true)) back("tab=form#f$id", t('adm.form.err_system'));
             q("DELETE FROM form_fields WHERE id = ?", [$id]); back('tab=form', t('adm.form.deleted'));
 
         // Nastavení / vlastnosti
@@ -608,48 +639,93 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
 
     <?php /* ================= FORMULÁŘ ================= */ elseif ($tab === 'form'): ?>
       <h1><?= te('adm.form.title') ?></h1>
-      <p class="muted"><?= t('adm.form.hint') /* HTML */ ?></p>
+      <p class="muted"><?= te('adm.form.intro') ?></p>
       <?php
         $fields = q("SELECT * FROM form_fields ORDER BY sort, id")->fetchAll();
         $types = []; foreach (['text', 'email', 'tel', 'number', 'textarea', 'select', 'checkbox', 'date'] as $ft) $types[$ft] = t('adm.ftype.' . $ft);
+        // formulář pole: jen to podstatné; nápověda a možnosti se ukážou podle typu, klíč a šířka v „Pokročilé“
         $fieldForm = function (?array $f) use ($types): string {
+            $sys = $f && in_array($f['fkey'], FORM_SYSTEM_FIELDS, true);
+            $lockType = $f && in_array($f['fkey'], ['name', 'email'], true);
             ob_start(); ?>
-            <form method="post" class="form">
+            <form method="post" class="form ff-form" data-ff>
               <?= csrf_field() ?><input type="hidden" name="action" value="field_save"><input type="hidden" name="id" value="<?= (int) ($f['id'] ?? 0) ?>">
-              <div class="form__grid form__grid--4">
-                <label class="field"><?= te('adm.form.f_key') ?><input type="text" name="fkey" value="<?= e($f['fkey'] ?? '') ?>" placeholder="<?= te('adm.form.f_key_ph') ?>"></label>
-                <label class="field"><?= te('adm.f_type') ?><select name="type"><?php foreach ($types as $k => $v): ?><option value="<?= $k ?>" <?= ($f['type'] ?? 'text') === $k ? 'selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select></label>
-                <label class="field"><?= te('adm.sort') ?><input type="text" name="sort" value="<?= (int) ($f['sort'] ?? 100) ?>"></label>
-                <div class="field checks">
-                  <label class="check"><input type="checkbox" name="is_required" value="1" <?= !empty($f['is_required']) ? 'checked' : '' ?>><span><?= te('adm.form.f_required') ?></span></label>
-                  <label class="check"><input type="checkbox" name="is_wide" value="1" <?= !empty($f['is_wide']) ? 'checked' : '' ?>><span><?= te('adm.form.f_wide') ?></span></label>
-                  <label class="check"><input type="checkbox" name="is_active" value="1" <?= ($f['is_active'] ?? 1) ? 'checked' : '' ?>><span><?= te('adm.form.f_active') ?></span></label>
-                </div>
-              </div>
               <div class="form__grid">
                 <label class="field"><span><span class="flag">CZ</span> <?= te('adm.form.f_label') ?> *</span><input type="text" name="label_cs" value="<?= e($f['label_cs'] ?? '') ?>" required></label>
-                <label class="field"><span><span class="flag">EN</span> <?= te('adm.form.f_label') ?></span><input type="text" name="label_en" value="<?= e($f['label_en'] ?? '') ?>"></label>
+                <label class="field"><span><span class="flag">EN</span> <?= te('adm.form.f_label') ?></span><input type="text" name="label_en" value="<?= e($f['label_en'] ?? '') ?>" placeholder="<?= te('adm.settings.same_as_cz') ?>"></label>
+                <label class="field"><?= te('adm.f_type') ?>
+                  <select name="type" data-ff-type<?= $lockType ? ' disabled' : '' ?>><?php foreach ($types as $k => $v): ?><option value="<?= $k ?>"<?= ($f['type'] ?? 'text') === $k ? ' selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select></label>
+                <?php if (!$f): ?><label class="check field ff-check"><input type="checkbox" name="is_required" value="1"><span><?= te('adm.form.f_required') ?></span></label><?php endif; ?>
+              </div>
+              <div class="form__grid" data-ff-show="text email tel number textarea">
                 <label class="field"><span><span class="flag">CZ</span> <?= te('adm.form.f_placeholder') ?></span><input type="text" name="placeholder_cs" value="<?= e($f['placeholder_cs'] ?? '') ?>"></label>
                 <label class="field"><span><span class="flag">EN</span> <?= te('adm.form.f_placeholder') ?></span><input type="text" name="placeholder_en" value="<?= e($f['placeholder_en'] ?? '') ?>"></label>
-                <label class="field"><span><span class="flag">CZ</span> <?= te('adm.form.f_options') ?></span><textarea name="options_cs" rows="3"><?= e($f['options_cs'] ?? '') ?></textarea></label>
-                <label class="field"><span><span class="flag">EN</span> <?= te('adm.form.f_options') ?></span><textarea name="options_en" rows="3"><?= e($f['options_en'] ?? '') ?></textarea></label>
               </div>
+              <div class="form__grid" data-ff-show="select">
+                <label class="field"><span><span class="flag">CZ</span> <?= te('adm.form.f_options') ?> <small class="hint"><?= te('adm.form.options_hint') ?></small></span><textarea name="options_cs" rows="4"><?= e($f['options_cs'] ?? '') ?></textarea></label>
+                <label class="field"><span><span class="flag">EN</span> <?= te('adm.form.f_options') ?></span><textarea name="options_en" rows="4"><?= e($f['options_en'] ?? '') ?></textarea></label>
+              </div>
+              <details class="ff-adv">
+                <summary><?= te('adm.form.advanced') ?></summary>
+                <div class="form__grid">
+                  <label class="field"><?= te('adm.form.f_key') ?>
+                    <input type="text" name="fkey" value="<?= e($f['fkey'] ?? '') ?>" placeholder="<?= te('adm.form.f_key_ph') ?>"<?= $sys ? ' readonly' : '' ?>>
+                    <?php if ($sys): ?><small class="hint"><?= te('adm.form.key_locked') ?></small><?php endif; ?></label>
+                  <label class="check field ff-check"><input type="hidden" name="is_wide" value="<?= $f ? '0' : '' ?>"><input type="checkbox" name="is_wide" value="1"<?= !empty($f['is_wide']) ? ' checked' : '' ?>><span><?= te('adm.form.f_wide') ?></span></label>
+                </div>
+              </details>
               <button class="btn btn--small"><?= te($f ? 'adm.form.save' : 'adm.form.add') ?></button>
             </form>
             <?php return (string) ob_get_clean();
         };
       ?>
-      <?php foreach ($fields as $f): ?>
-        <details class="item <?= $f['is_active'] ? '' : 'item--off' ?>">
-          <summary class="item__head">
-            <strong><?= e($f['label_cs']) ?><?= $f['is_required'] ? ' *' : '' ?></strong>
-            <span class="muted"><?= e($types[$f['type']] ?? $f['type']) ?> · <code><?= e($f['fkey']) ?></code> · <?= e($f['label_en'] ?: '—') ?><?= $f['is_active'] ? '' : ' · ' . te('adm.hidden') ?></span>
-          </summary>
-          <?= $fieldForm($f) ?>
-          <div class="item__actions"><?= btn_post('field_delete', (int) $f['id'], t('adm.form.delete'), 'btn btn--small btn--danger', t('adm.form.confirm_delete')) ?></div>
-        </details>
-      <?php endforeach; ?>
-      <div class="panel"><h2><?= te('adm.form.new') ?></h2><?= $fieldForm(null) ?></div>
+      <ol class="ff-list">
+        <?php foreach ($fields as $i => $f): $sys = in_array($f['fkey'], FORM_SYSTEM_FIELDS, true); $locked = in_array($f['fkey'], ['name', 'email'], true); ?>
+          <li class="ff<?= $f['is_active'] ? '' : ' ff--off' ?>" id="f<?= (int) $f['id'] ?>">
+            <div class="ff__row">
+              <div class="ff__name">
+                <strong><?= e($f['label_cs']) ?></strong>
+                <span class="muted"><?= e($types[$f['type']] ?? $f['type']) ?><?= $f['label_en'] ? ' · EN: ' . e($f['label_en']) : ' · <span class="badge">' . te('adm.missing_en') . '</span>' ?></span>
+              </div>
+              <div class="ff__toggles">
+                <?php if ($locked): ?>
+                  <span class="pill is-on is-locked" title="<?= te('adm.form.err_system') ?>"><?= te('adm.form.f_required') ?></span>
+                  <span class="pill is-on is-locked" title="<?= te('adm.form.err_system') ?>"><?= te('adm.form.visible') ?></span>
+                <?php else: ?>
+                  <?= btn_post('field_toggle', (int) $f['id'], t('adm.form.f_required'), 'pill' . ($f['is_required'] ? ' is-on' : ''), '', ['what' => 'required']) ?>
+                  <?= btn_post('field_toggle', (int) $f['id'], t($f['is_active'] ? 'adm.form.visible' : 'adm.form.hidden_state'), 'pill' . ($f['is_active'] ? ' is-on' : ''), '', ['what' => 'active']) ?>
+                <?php endif; ?>
+              </div>
+              <div class="ff__order">
+                <?= $i > 0 ? btn_post('field_move', (int) $f['id'], '↑', 'btn btn--small btn--ghost ff__move', '', ['dir' => 'up']) : '<span class="ff__move"></span>' ?>
+                <?= $i < count($fields) - 1 ? btn_post('field_move', (int) $f['id'], '↓', 'btn btn--small btn--ghost ff__move', '', ['dir' => 'down']) : '<span class="ff__move"></span>' ?>
+              </div>
+            </div>
+            <details class="ff__edit">
+              <summary><?= te('adm.edit') ?></summary>
+              <?= $fieldForm($f) ?>
+              <?php if (!$sys): ?><div class="item__actions"><?= btn_post('field_delete', (int) $f['id'], t('adm.form.delete'), 'btn btn--small btn--danger', t('adm.form.confirm_delete')) ?></div>
+              <?php else: ?><p class="hint"><?= te('adm.form.system_note') ?></p><?php endif; ?>
+            </details>
+          </li>
+        <?php endforeach; ?>
+      </ol>
+      <details class="panel ff-new">
+        <summary><strong><?= te('adm.form.add_title') ?></strong></summary>
+        <?= $fieldForm(null) ?>
+      </details>
+      <script>
+        // nápověda v poli jen u textových typů, možnosti jen u výběru ze seznamu
+        document.querySelectorAll('[data-ff]').forEach(function (form) {
+          var sel = form.querySelector('[data-ff-type]');
+          var sync = function () {
+            form.querySelectorAll('[data-ff-show]').forEach(function (box) {
+              box.hidden = box.getAttribute('data-ff-show').split(' ').indexOf(sel.value) < 0;
+            });
+          };
+          sel.addEventListener('change', sync); sync();
+        });
+      </script>
 
     <?php /* ================= TEXTY CZ/EN ================= */ elseif ($tab === 'texts'): ?>
       <?php

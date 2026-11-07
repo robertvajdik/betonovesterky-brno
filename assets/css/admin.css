@@ -163,3 +163,37 @@ code { background: var(--concrete-100); padding: 0 .3rem; border-radius: 2px; fo
   .cal__agenda .cal-ev { font-size: .85rem; padding: .35rem .5rem; white-space: normal; }
 }
 .admin-bar nav { scrollbar-width: none; } .admin-bar nav::-webkit-scrollbar { display: none; }   /* mobil: lišta se posouvá prstem, bez šedého posuvníku */
+
+/* Formulář: jednoduchý seznam polí s přepínači a pořadím */
+.ff-list { list-style: none; margin: 0 0 1.2rem; padding: 0; display: grid; gap: .5rem; }
+.ff { background: var(--white); border: 1px solid var(--concrete-200); border-radius: var(--radius); }
+.ff--off .ff__name { opacity: .5; }
+.ff__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .6rem 1rem; align-items: center; padding: .75rem 1rem; }
+.ff__name { display: grid; gap: .1rem; min-width: 0; }
+.ff__name .muted { font-size: .85rem; }
+.ff__toggles { display: flex; gap: .35rem; }
+.ff__toggles form { margin: 0; }
+.pill { display: inline-flex; align-items: center; gap: .35rem; min-height: 34px; padding: .25rem .8rem; border-radius: 999px; border: 1px solid var(--concrete-200);
+  background: var(--white); color: var(--concrete-600); font: 600 .82rem/1 var(--font-body, inherit); cursor: pointer; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--concrete-200); }
+.pill.is-on { border-color: var(--ink); color: var(--ink); }
+.pill.is-on::before { background: var(--accent); }
+.pill.is-locked { cursor: default; opacity: .7; }
+.pill:not(.is-locked):hover { border-color: var(--accent); }
+.ff__order { display: flex; gap: .25rem; }
+.ff__order form { margin: 0; }
+.ff__move { width: 38px; min-height: 34px; padding: 0; justify-content: center; display: inline-flex; align-items: center; }
+.ff__edit { border-top: 1px solid var(--concrete-100); }
+.ff__edit > summary { padding: .5rem 1rem; cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--accent-dark); }
+.ff__edit[open] > summary { border-bottom: 1px solid var(--concrete-100); }
+.ff__edit .ff-form, .ff__edit .item__actions, .ff__edit > .hint { margin: 1rem; }
+.ff-form [hidden] { display: none; }
+.ff-check { align-self: end; min-height: 48px; align-items: center; }
+.ff-adv > summary { cursor: pointer; font-size: .88rem; color: var(--concrete-600); }
+.ff-adv[open] > summary { margin-bottom: .7rem; }
+.ff-new > summary { cursor: pointer; }
+.ff-new[open] > summary { margin-bottom: 1rem; }
+@media (max-width: 760px) {
+  .ff__row { grid-template-columns: 1fr auto; }
+  .ff__toggles { grid-column: 1 / -1; grid-row: 2; }
+}
