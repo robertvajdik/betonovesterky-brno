@@ -123,21 +123,17 @@ $cardGrid = function (array $items, string $class = 'cards'): string {
   </div>
 </section>
 <?php elseif (prop_bool('site.fb_feed') && preg_match('~^https://(www\.|m\.)?facebook\.com/~', $fb)):
-  // Bez tokenu: oficiální plugin Facebooku až po kliknutí (Facebook ukládá cookies, potřebuje souhlas)
-  $fbSrc = 'https://www.facebook.com/plugins/page.php?' . http_build_query([
-      'href' => $fb, 'tabs' => 'timeline', 'width' => 500, 'height' => 640, 'small_header' => 'true',
-      'adapt_container_width' => 'true', 'hide_cover' => 'false', 'show_facepile' => 'false', 'locale' => lang() === 'en' ? 'en_GB' : 'cs_CZ',
-  ]); ?>
+  // Bez tokenu (config.php → facebook): vložený plugin Facebooku u této stránky ukazuje jen záhlaví bez příspěvků,
+  // proto místo prázdného rámečku výzva ke sledování. Příspěvky se zobrazí samy po doplnění tokenu (README → Facebook). ?>
 <section class="section section--tint">
-  <div class="container split split--top fb-feed">
-    <div>
-      <h2><?= te('home.fb_title') ?></h2>
-      <p class="lead"><?= te('home.fb_lead') ?></p>
-      <a href="<?= e($fb) ?>" class="btn btn--ghost" target="_blank" rel="noopener"><?= icon('facebook', 18) ?> <?= te('home.fb_open') ?></a>
-    </div>
-    <div class="fb-feed__box" data-embed-src="<?= e($fbSrc) ?>" data-embed-title="<?= te('home.fb_title') ?>" data-embed-class="fb-feed__frame">
-      <button type="button" class="btn btn--light"><?= te('home.fb_load') ?></button>
-      <p><?= te('home.fb_note') ?></p>
+  <div class="container">
+    <div class="fb-follow">
+      <span class="fb-follow__icon" aria-hidden="true"><?= icon('facebook', 30) ?></span>
+      <div class="fb-follow__text">
+        <h2><?= te('home.fb_title') ?></h2>
+        <p><?= te('home.fb_lead') ?></p>
+      </div>
+      <a href="<?= e($fb) ?>" class="btn" target="_blank" rel="noopener"><?= te('home.fb_open') ?></a>
     </div>
   </div>
 </section>

@@ -540,3 +540,11 @@ p { margin: 0 0 1em; }
 .track-photos a { display: block; aspect-ratio: 1; overflow: hidden; border-radius: var(--radius); background: var(--concrete-100); }
 .track-photos img { width: 100%; height: 100%; object-fit: cover; }
 .track__sub { font-size: 1rem; margin: 1.2rem 0 .6rem; }
+
+/* Facebook bez tokenu: výzva ke sledování místo prázdného pluginu */
+.fb-follow { display: flex; align-items: center; gap: 1.2rem 1.6rem; flex-wrap: wrap; background: var(--white); border: 1px solid var(--concrete-200); padding: clamp(1.2rem, 3vw, 2rem); }
+.fb-follow__icon { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: #1877f2; color: #fff; }
+.fb-follow__text { flex: 1 1 280px; }
+.fb-follow__text h2 { margin: 0 0 .3rem; font-size: clamp(1.3rem, 3vw, 1.7rem); }
+.fb-follow__text p { margin: 0; color: var(--concrete-600); }
+@media (max-width: 600px) { .fb-follow .btn { width: 100%; } }

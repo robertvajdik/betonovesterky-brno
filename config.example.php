@@ -26,7 +26,7 @@ return [
     // Odesílání e-mailů přes SMTP (doporučeno – e-maily nepadají do spamu). Prázdný host = PHP mail().
     // Údaje najdete u poskytovatele e-mailu (např. Seznam: smtp.seznam.cz, 465, ssl; Gmail: smtp.gmail.com, 587, tls + heslo aplikace).
     'smtp' => [
-        'host'   => '',
+        'host'   => '',           // např. smtp.cesky-hosting.cz
         'port'   => 587,
         'secure' => 'tls',        // 'tls' (STARTTLS, port 587) | 'ssl' (port 465) | '' (bez šifrování – nedoporučeno)
         'user'   => '',

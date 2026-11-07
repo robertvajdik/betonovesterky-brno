@@ -162,3 +162,4 @@ code { background: var(--concrete-100); padding: 0 .3rem; border-radius: 2px; fo
   .cal__date { font-weight: 700; font-size: .85rem; }
   .cal__agenda .cal-ev { font-size: .85rem; padding: .35rem .5rem; white-space: normal; }
 }
+.admin-bar nav { scrollbar-width: none; } .admin-bar nav::-webkit-scrollbar { display: none; }   /* mobil: lišta se posouvá prstem, bez šedého posuvníku */
