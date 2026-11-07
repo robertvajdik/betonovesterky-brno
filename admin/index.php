@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin-nav.php';
 
 function admin_url(string $q = ''): string { return url('admin/') . ($q !== '' ? '?' . $q : ''); }
 function back(string $q = '', ?string $msg = null): never
@@ -70,6 +71,7 @@ if ($logged && $action !== '') {
         case 'inquiry_link':
             back('tab=inquiries#q' . $id, send_track_link($id) ? t('adm.inq.link_sent') : t('adm.inq.link_failed'));
         case 'inquiry_delete':
+            inquiry_delete_photos($id);
             q("DELETE FROM inquiries WHERE id = ?", [$id]); back('tab=inquiries', t('adm.inq.deleted'));
         case 'inquiry_reply':
             // odpověď zákazníkovi (+ změna stavu); registrovaný ji uvidí v účtu, všem přijde e-mailem
@@ -257,8 +259,6 @@ if ($logged && $action !== '') {
 }
 
 $msg     = flash('admin');
-$unread  = $logged ? (int) q("SELECT COUNT(*) FROM inquiries WHERE is_read = 0")->fetchColumn() : 0;
-$pending = $logged ? (int) q("SELECT COUNT(*) FROM reviews WHERE is_approved = 0")->fetchColumn() : 0;
 
 function btn_post(string $action, int $id, string $label, string $class = 'btn btn--small btn--ghost', string $confirm = '', array $extra = []): string
 {
@@ -281,18 +281,6 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
          . '<label><span class="flag">EN</span>' . $in($name . '_en', $en) . '</label></div>';
 }
 
-$tabs = [
-    'inquiries' => t('adm.tab.inquiries') . ($unread ? " ($unread)" : ''),
-    'customers' => t('adm.tab.customers'),
-    'reviews'   => t('adm.tab.reviews') . ($pending ? " ($pending)" : ''),
-    'gallery'   => t('adm.tab.gallery'),
-    'pages'     => t('adm.tab.pages'),
-    'projects'  => t('adm.tab.projects'),
-    'form'      => t('adm.tab.form'),
-    'texts'     => t('adm.tab.texts'),
-    'invoices'  => t('adm.tab.invoices'),
-    'settings'  => t('adm.tab.settings'),
-];
 ?><!doctype html>
 <html lang="cs">
 <head>
@@ -318,16 +306,7 @@ $tabs = [
     </form>
   </div>
 <?php else: ?>
-  <header class="admin-bar">
-    <strong><?= e(site('name')) ?></strong>
-    <nav>
-      <?php foreach ($tabs as $k => $label): ?>
-        <a href="<?= e(admin_url("tab=$k")) ?>" class="<?= $tab === $k ? 'is-active' : '' ?>"><?= e($label) ?></a>
-      <?php endforeach; ?>
-      <a href="<?= e(url()) ?>" target="_blank"><?= te('adm.nav.web') ?></a>
-      <a href="<?= e(admin_url('logout=1')) ?>"><?= te('adm.nav.logout') ?></a>
-    </nav>
-  </header>
+  <?= admin_menu($tab) ?>
   <main class="container admin-main">
     <?php if ($msg): ?><div class="alert alert--ok"><?= e($msg) ?></div><?php endif; ?>
 
@@ -348,7 +327,8 @@ $tabs = [
             $msgs = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$r['id']])->fetchAll();
             // cena a záloha ze smluv, faktury k poptávce
             $deals = q("SELECT id, number, data FROM contracts WHERE inquiry_id = ? ORDER BY id DESC", [$r['id']])->fetchAll();
-            $invs  = q("SELECT id, number, total, due, paid_at, data FROM invoices WHERE inquiry_id = ? ORDER BY id DESC", [$r['id']])->fetchAll(); ?>
+            $invs  = q("SELECT id, number, total, due, paid_at, data FROM invoices WHERE inquiry_id = ? ORDER BY id DESC", [$r['id']])->fetchAll();
+            $pics  = inquiry_photos((int) $r['id']); ?>
         <article class="item <?= $r['is_read'] ? '' : 'item--new' ?>" id="q<?= (int) $r['id'] ?>">
           <div class="item__head">
             <strong>#<?= (int) $r['id'] ?> <?= e($r['name']) ?></strong>
@@ -385,6 +365,13 @@ $tabs = [
             </dl>
           <?php else: ?>
             <p><?= nl2br(e($r['message'])) ?></p>
+          <?php endif; ?>
+          <?php if ($pics): ?>
+            <ul class="inq-photos" aria-label="<?= te('adm.inq.photos') ?>">
+              <?php foreach ($pics as $ph): $src = url('admin/file.php?id=' . $ph['id']); ?>
+                <li><a href="<?= e($src) ?>" target="_blank" title="<?= e($ph['original']) ?>"><img src="<?= e($src) ?>" alt="<?= e($ph['original']) ?>" loading="lazy"></a></li>
+              <?php endforeach; ?>
+            </ul>
           <?php endif; ?>
           <?php if ($msgs): ?>
             <ol class="thread thread--admin">
@@ -712,7 +699,8 @@ $tabs = [
                          'adm.sec.social'   => ['site.facebook', 'site.instagram', 'site.fb_feed'],
                          'adm.sec.web'      => ['site.domain', 'site.geo', 'site.gdpr_url', 'site.accounts', 'site.email_protect']],
             'images' => ['adm.sec.images'   => array_keys(array_filter($all, fn($r) => $r['grp'] === 'images'))],
-            'seo'    => ['adm.sec.seo'      => ['seo.indexing', 'seo.jsonld', 'seo.microdata', 'seo.rdfa']],
+            'seo'    => ['adm.sec.meta'     => ['seo.keywords', 'seo.og_image'],
+                         'adm.sec.seo'      => ['seo.indexing', 'seo.jsonld', 'seo.microdata', 'seo.rdfa']],
             'robots' => ['adm.sec.robots'   => ['seo.robots_extra', 'seo.sitemap_auto']],
             'ga'     => ['adm.sec.ga'       => ['ga.enabled', 'ga.id']],
             'inv'    => ['adm.sec.inv_bank' => ['site.bank', 'inv.iban'],
@@ -727,7 +715,7 @@ $tabs = [
             $rest = array_values(array_filter(array_keys($all), fn($k) => str_starts_with($k, $prefix) && !in_array($k, $listed, true)));
             if ($rest) $sections['adm.sec.other'] = $rest;
         }
-        $bilingual = ['site.name', 'site.tagline', 'site.hours'];
+        $bilingual = ['site.name', 'site.tagline', 'site.hours', 'seo.keywords'];
         $inputType = ['site.email' => 'email', 'site.phone' => 'tel', 'site.whatsapp' => 'tel', 'site.facebook' => 'url', 'site.instagram' => 'url',
                       'site.gdpr_url' => 'url', 'site.domain' => 'url', 'site.years' => 'number', 'inv.due' => 'number', 'inv.vat_rate' => 'number'];
         $placeholder = ['ga.id' => 'G-XXXXXXXXXX', 'site.domain' => 'https://www.betonovesterky-brno.cz', 'site.bank' => '123456789/0800', 'inv.format' => 'RRRR###'];

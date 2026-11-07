@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 14;
+const DB_VERSION = 16;
 
 function db_migrate(): void
 {
@@ -109,6 +109,17 @@ function db_migrate(): void
     if (!$hasColumn('inquiries', 'access_hash')) {
         $try("ALTER TABLE inquiries ADD access_hash CHAR(64) NULL AFTER id");
     }
+
+    // v15: fotky přiložené k poptávce (soubory v uploads/private/inquiries/{id}/)
+    $try("CREATE TABLE IF NOT EXISTS inquiry_files (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        inquiry_id  INT UNSIGNED NOT NULL,
+        file        VARCHAR(80)  NOT NULL,
+        original    VARCHAR(160) NULL,
+        size        INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_file_inquiry (inquiry_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';

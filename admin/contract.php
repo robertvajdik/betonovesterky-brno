@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   ?id=ID&edit=1    úprava uložené smlouvy
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin-nav.php';
 
 // PUBLIC_DOC = zobrazení pro zákazníka přes soukromý odkaz (pages/track.php ověřil token): jen čtení, bez tlačítek administrace
 if (!defined('PUBLIC_DOC') && empty($_SESSION['admin_id'])) {
@@ -290,6 +291,7 @@ $fld = function (string $name, string $label, string $type = 'text', string $ext
 </style>
 </head>
 <body class="admin">
+<?= admin_menu('inquiries') ?>
 <main class="container admin-main contract-form">
   <p><a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.contract.back') ?></a></p>
   <h1><?= $contract ? te('adm.contract.heading', ['number' => $contract['number']]) : te('adm.contract.new_title') ?></h1>

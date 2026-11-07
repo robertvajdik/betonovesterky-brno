@@ -1,5 +1,5 @@
 <?php /** @var array $errors */ $ok = flash('inquiry'); ?>
-<form method="post" class="form" id="formular"<?= recaptcha_attrs('inquiry') ?>>
+<form method="post" class="form" id="formular" enctype="multipart/form-data"<?= recaptcha_attrs('inquiry') ?>>
   <?php if ($ok): ?><div class="alert alert--ok" role="status"><?= e($ok) ?></div><?php endif; ?>
   <?php if (!empty($errors)): ?>
     <div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div>
@@ -20,6 +20,16 @@
     <?php foreach (form_fields() as $f): ?>
       <?= render_field($f) ?>
     <?php endforeach; ?>
+  </div>
+
+  <div class="photos" data-photos data-max="<?= INQ_MAX_PHOTOS ?>" data-remove="<?= te('form.photos_remove') ?>">
+    <label class="photos__drop">
+      <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp,image/*" multiple class="photos__input">
+      <span class="photos__icon" aria-hidden="true"><?= icon('plus', 22) ?></span>
+      <span><strong><?= te('form.photos_label') ?></strong> <span class="muted"><?= te('form.optional') ?></span><br>
+        <small><?= te('form.photos_hint', ['max' => INQ_MAX_PHOTOS]) ?></small></span>
+    </label>
+    <ul class="photos__list" aria-live="polite"></ul>
   </div>
 
   <label class="check">

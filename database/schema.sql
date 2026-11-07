@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS customers;
 -- Tabulky customers, inquiry_messages a nové texty doplní web sám při prvním načtení (includes/migrate.php + migrate.sql).
 DROP TABLE IF EXISTS properties;
 DROP TABLE IF EXISTS form_fields;
+DROP TABLE IF EXISTS inquiry_files;
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS contracts;
 DROP TABLE IF EXISTS admin_users;
@@ -170,6 +171,16 @@ CREATE TABLE invoices (
   updated_at  DATETIME NULL,
   INDEX idx_inv_inquiry (inquiry_id),
   INDEX idx_inv_contract (contract_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci;
+
+CREATE TABLE inquiry_files (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  inquiry_id  INT UNSIGNED NOT NULL,
+  file        VARCHAR(80)  NOT NULL,             -- náhodný název v uploads/private/inquiries/{inquiry_id}/
+  original    VARCHAR(160) NULL,
+  size        INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_file_inquiry (inquiry_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci;
 
 CREATE TABLE admin_users (
@@ -806,7 +817,7 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('form.recaptcha_privacy', 'form', 'line', NULL, 'zásady ochrany soukromí', 'Privacy Policy', 3),
 ('form.recaptcha_terms', 'form', 'line', NULL, 'smluvní podmínky', 'Terms of Service', 4),
 ('mail.track_subject', 'mail', 'line', NULL, 'Vaše poptávka č. {id} – {site}', 'Your enquiry no. {id} – {site}', 5),
-('mail.track_body', 'mail', 'text', NULL, 'Dobrý den,\\n\\nděkujeme za poptávku. Její stav, smlouvu o dílo a faktury najdete kdykoli na tomto odkazu:\\n{url}\\n\\nOdkaz je jen pro vás – nikomu ho nepřeposílejte.\\n\\n{site}', 'Hello,\\n\\nthank you for your enquiry. You can check its status, the contract and invoices at any time here:\\n{url}\\n\\nThis link is just for you – please do not forward it.\\n\\n{site}', 6),
+('mail.track_body', 'mail', 'text', NULL, 'Dobrý den,\n\nděkujeme za poptávku. Její stav, smlouvu o dílo a faktury najdete kdykoli na tomto odkazu:\n{url}\n\nOdkaz je jen pro vás – nikomu ho nepřeposílejte.\n\n{site}', 'Hello,\n\nthank you for your enquiry. You can check its status, the contract and invoices at any time here:\n{url}\n\nThis link is just for you – please do not forward it.\n\n{site}', 6),
 ('track.title_generic', 'track', 'line', NULL, 'Vaše poptávka', 'Your enquiry', 7),
 ('track.title', 'track', 'line', NULL, 'Poptávka č. {id}', 'Enquiry no. {id}', 8),
 ('track.lead', 'track', 'line', NULL, 'Odesláno {date}. Tady uvidíte, jak se vaše zakázka posouvá.', 'Sent on {date}. Here you can follow how your job is progressing.', 9),
@@ -831,7 +842,7 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 ('adm.mail.off', 'adm', 'line', NULL, 'vypnutá', '', 504),
 ('adm.mail.on', 'adm', 'line', NULL, 'zapnutá', '', 505),
 ('adm.mail.recaptcha', 'adm', 'line', NULL, 'Ochrana formulářů reCAPTCHA v3: {state} (klíče v config.php).', '', 506),
-('adm.mail.test_body', 'adm', 'line', NULL, 'Tento e-mail potvrzuje, že odesílání z webu funguje.\\n\\nZpůsob odeslání: {transport}', '', 507),
+('adm.mail.test_body', 'adm', 'line', NULL, 'Tento e-mail potvrzuje, že odesílání z webu funguje.\n\nZpůsob odeslání: {transport}', '', 507),
 ('adm.mail.test_btn', 'adm', 'line', NULL, 'Poslat zkušební e-mail na {email}', '', 508),
 ('adm.mail.test_fail', 'adm', 'line', NULL, 'E-mail se nepodařilo odeslat: {error}', '', 509),
 ('adm.mail.test_ok', 'adm', 'line', NULL, 'Zkušební e-mail byl odeslán na {email}. Zkontrolujte schránku (i spam).', '', 510),
@@ -843,12 +854,31 @@ INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort)
 -- v14: faktura e-mailem
 INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 ('mail.invoice_subject', 'mail', 'line', NULL, 'Faktura {number} – {site}', 'Invoice {number} – {site}', 20),
-('mail.invoice_body', 'mail', 'text', NULL, 'Dobrý den,\\n\\nposíláme fakturu č. {number}.\\n\\nČástka k úhradě: {amount}\\nSplatnost: {due}\\nČíslo účtu: {account}\\nVariabilní symbol: {vs}\\n\\nFakturu s QR kódem pro platbu z mobilu si zobrazíte a vytisknete zde:\\n{url}\\n\\nDěkujeme za spolupráci.\\n{site}', 'Hello,\\n\\nplease find invoice no. {number} below.\\n\\nAmount due: {amount}\\nDue date: {due}\\nAccount number: {account}\\nVariable symbol: {vs}\\n\\nYou can view and print the invoice, including a QR code for mobile banking, here:\\n{url}\\n\\nThank you.\\n{site}', 21),
+('mail.invoice_body', 'mail', 'text', NULL, 'Dobrý den,\n\nposíláme fakturu č. {number}.\n\nČástka k úhradě: {amount}\nSplatnost: {due}\nČíslo účtu: {account}\nVariabilní symbol: {vs}\n\nFakturu s QR kódem pro platbu z mobilu si zobrazíte a vytisknete zde:\n{url}\n\nDěkujeme za spolupráci.\n{site}', 'Hello,\n\nplease find invoice no. {number} below.\n\nAmount due: {amount}\nDue date: {due}\nAccount number: {account}\nVariable symbol: {vs}\n\nYou can view and print the invoice, including a QR code for mobile banking, here:\n{url}\n\nThank you.\n{site}', 21),
 ('mail.invoice_deposit_subject', 'mail', 'line', NULL, 'Zálohová faktura {number} – {site}', 'Deposit invoice {number} – {site}', 22),
-('mail.invoice_deposit_body', 'mail', 'text', NULL, 'Dobrý den,\\n\\npodle smlouvy o dílo posíláme zálohovou fakturu č. {number}.\\n\\nČástka k úhradě: {amount}\\nSplatnost: {due}\\nČíslo účtu: {account}\\nVariabilní symbol: {vs}\\n\\nZálohovou fakturu s QR kódem pro platbu z mobilu najdete zde:\\n{url}\\n\\nDěkujeme.\\n{site}', 'Hello,\\n\\nas agreed in the contract, please find deposit invoice no. {number} below.\\n\\nAmount due: {amount}\\nDue date: {due}\\nAccount number: {account}\\nVariable symbol: {vs}\\n\\nYou can view the deposit invoice, including a QR code for mobile banking, here:\\n{url}\\n\\nThank you.\\n{site}', 23),
+('mail.invoice_deposit_body', 'mail', 'text', NULL, 'Dobrý den,\n\npodle smlouvy o dílo posíláme zálohovou fakturu č. {number}.\n\nČástka k úhradě: {amount}\nSplatnost: {due}\nČíslo účtu: {account}\nVariabilní symbol: {vs}\n\nZálohovou fakturu s QR kódem pro platbu z mobilu najdete zde:\n{url}\n\nDěkujeme.\n{site}', 'Hello,\n\nas agreed in the contract, please find deposit invoice no. {number} below.\n\nAmount due: {amount}\nDue date: {due}\nAccount number: {account}\nVariable symbol: {vs}\n\nYou can view the deposit invoice, including a QR code for mobile banking, here:\n{url}\n\nThank you.\n{site}', 23),
 ('adm.invoice.no_email', 'adm', 'line', NULL, 'U faktury ani poptávky není e-mail odběratele – doplňte ho v úpravě faktury.', '', 600),
 ('adm.invoice.resend_btn', 'adm', 'line', NULL, 'Poslat znovu e-mailem', '', 601),
 ('adm.invoice.send_btn', 'adm', 'line', NULL, 'Poslat e-mailem', '', 602),
 ('adm.invoice.send_fail', 'adm', 'line', NULL, 'Fakturu se nepodařilo odeslat: {error}', '', 603),
 ('adm.invoice.sent', 'adm', 'line', NULL, 'Faktura byla odeslána na {email}.', '', 604),
 ('adm.invoice.sent_on', 'adm', 'line', NULL, 'odesláno {date} na {email}', '', 605);
+
+-- v15: fotky k poptávce
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('form.photos_label', 'form', 'line', NULL, 'Fotky toho, co chcete natřít nebo upravit', 'Photos of what you would like finished', 40),
+('form.optional', 'form', 'line', NULL, '(nepovinné)', '(optional)', 41),
+('form.photos_hint', 'form', 'line', NULL, 'Až {max} fotek z mobilu nebo počítače. Pomůžou nám s odhadem ceny.', 'Up to {max} photos from your phone or computer. They help us estimate the price.', 42),
+('form.photos_remove', 'form', 'line', NULL, 'Odebrat fotku', 'Remove photo', 43),
+('form.err_photos_count', 'form', 'line', NULL, 'Přiložit můžete nejvýš {max} fotek.', 'You can attach at most {max} photos.', 44),
+('form.err_photo_size', 'form', 'line', NULL, 'Fotka {file} je příliš velká.', 'Photo {file} is too large.', 45),
+('form.err_photo_upload', 'form', 'line', NULL, 'Fotku {file} se nepodařilo nahrát, zkuste to prosím znovu.', 'Photo {file} could not be uploaded, please try again.', 46),
+('form.err_photo_type', 'form', 'line', NULL, 'Soubor {file} není fotka (JPG, PNG nebo WebP).', 'File {file} is not a photo (JPG, PNG or WebP).', 47),
+('track.photos', 'track', 'line', NULL, 'Vaše fotky', 'Your photos', 48),
+('adm.inq.photos', 'adm', 'line', NULL, 'Přiložené fotky', '', 700);
+
+-- v16: klíčová slova a obrázek pro sdílení
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('seo.keywords', 'seo', 'line', 'Klíčová slova (oddělená čárkou; Google je pro řazení nepoužívá, ostatní vyhledávače jen okrajově)', 'betonová stěrka Brno, betonové stěrky, dekorativní omítky, malířské práce, stěrka do koupelny, stěrka do kuchyně, stěrka na podlahu', 'concrete finish Brno, microcement, decorative plaster, painting, bathroom microcement, kitchen microcement', 2),
+('seo.og_image', 'seo', 'image', 'Obrázek pro sdílení (Facebook, WhatsApp, X; ideálně 1200 × 630 px – použije se, když stránka nemá vlastní fotku)', '', '', 3),
+('adm.sec.meta', 'adm', 'line', NULL, 'Klíčová slova a sdílení', '', 800);

@@ -17,6 +17,7 @@ $navLink = function (string $route, string $key) use ($current) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= e($fullTitle) ?></title>
 <meta name="description" content="<?= e($metaDesc) ?>">
+<?php if (($kw = trim(t('seo.keywords'))) !== '' && $kw !== 'seo.keywords'): ?><meta name="keywords" content="<?= e($kw) ?>"><?php endif; ?>
 <?php $is404 = $current === '404'; $private = !empty($noindex); ?>
 <?php if ($is404 || $private || !prop_bool('seo.indexing')): ?><meta name="robots" content="noindex<?= $is404 ? ', follow' : '' ?>"><?php endif; ?>
 <?php if (!$is404): ?>
@@ -27,7 +28,8 @@ $navLink = function (string $route, string $key) use ($current) {
 <?php endif; ?>
 <meta property="og:title" content="<?= e($fullTitle) ?>">
 <meta property="og:description" content="<?= e($metaDesc) ?>">
-<?php $ogAbs = abs_image($ogImage ?? null); if ($ogAbs): ?><meta property="og:image" content="<?= e($ogAbs) ?>"><?php endif; ?>
+<?php $ogAbs = abs_image(($ogImage ?? null) ?: ((string) (props()['seo.og_image']['value_cs'] ?? '') ?: null)); if ($ogAbs): ?><meta property="og:image" content="<?= e($ogAbs) ?>">
+<meta name="twitter:card" content="summary_large_image"><?php endif; ?>
 <meta property="og:type" content="website">
 <meta property="og:locale" content="<?= lang() === 'en' ? 'en_GB' : 'cs_CZ' ?>">
 <?php if (!$is404): ?><meta property="og:url" content="<?= e(abs_url($alt[lang()])) ?>">

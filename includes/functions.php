@@ -384,6 +384,8 @@ function handle_inquiry(string $source, string $returnUrl): array
     $to   = $data['term_to']['value'] ?? '';
     if ($from !== '' && $to !== '' && $to < $from) $errors[] = t('form.err_dates');
     if (empty($_POST['gdpr'])) $errors[] = t('form.err_gdpr');
+    $photos = inquiry_uploaded_photos();                   // fotky „co chcete natřít“ (includes/inquiry-files.php)
+    $errors = array_merge($errors, inquiry_photos_errors($photos));
     if ($errors) return $errors;
 
     // data v e-mailu a administraci česky: 2026-11-07 → 7. 11. 2026
@@ -406,6 +408,7 @@ function handle_inquiry(string $source, string $returnUrl): array
         json_encode($data, JSON_UNESCAPED_UNICODE), $source, lang(), $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
     $newId = (int) db()->lastInsertId();
+    $nPhotos = inquiry_store_photos($newId, $photos);
     send_track_link($newId);                                // zákazníkovi odkaz na stav poptávky, smlouvu a faktury
 
     global $CONFIG;
@@ -413,6 +416,7 @@ function handle_inquiry(string $source, string $returnUrl): array
         $body = "Nová poptávka č. {$newId} z webu ({$source}, " . strtoupper(lang()) . ")"
               . ($customer ? "\nRegistrovaný zákazník: {$customer['name']} <{$customer['email']}>" : '') . "\n\n";
         foreach ($data as $d) if ($d['value'] !== '') $body .= "{$d['label']}: {$d['value']}\n";
+        if ($nPhotos) $body .= "Přiložené fotky: {$nPhotos} (zobrazíte je v administraci)\n";
         $body .= "\nAdministrace: " . abs_url(url('admin/'));
         send_mail($CONFIG['notify_email'], "Nová poptávka č. {$newId} z webu", $body, $email);
     }

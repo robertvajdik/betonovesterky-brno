@@ -123,6 +123,57 @@
     });
   });
 
+  // Fotky k poptávce: náhledy, odebrání, zmenšení v prohlížeči (max 2000 px, JPEG – zároveň zahodí GPS a metadata)
+  document.querySelectorAll('[data-photos]').forEach(function (box) {
+    var input = box.querySelector('input[type=file]'), list = box.querySelector('.photos__list');
+    var max = parseInt(box.getAttribute('data-max'), 10) || 5, files = [];
+    if (!input || typeof DataTransfer === 'undefined') return;           // starý prohlížeč: obyčejné nahrání
+    var shrink = function (file) {
+      return new Promise(function (resolve) {
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return resolve(file);
+        var url = URL.createObjectURL(file), img = new Image();
+        img.onload = function () {
+          var scale = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          c.toBlob(function (blob) {
+            resolve(blob && blob.size < file.size * 1.1 ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file);
+          }, 'image/jpeg', 0.85);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+        img.src = url;
+      });
+    };
+    var sync = function () {
+      var dt = new DataTransfer();
+      files.forEach(function (f) { dt.items.add(f); });
+      input.files = dt.files;
+      list.innerHTML = '';
+      files.forEach(function (f, i) {
+        var li = document.createElement('li'), im = document.createElement('img'), b = document.createElement('button');
+        im.src = URL.createObjectURL(f); im.alt = ''; im.onload = function () { URL.revokeObjectURL(im.src); };
+        b.type = 'button'; b.className = 'photos__remove'; b.textContent = '×';
+        b.setAttribute('aria-label', (box.getAttribute('data-remove') || 'Odebrat') + ' ' + f.name);
+        b.addEventListener('click', function () { files.splice(i, 1); sync(); });
+        li.appendChild(im); li.appendChild(b); list.appendChild(li);
+      });
+      box.classList.toggle('is-full', files.length >= max);
+    };
+    input.addEventListener('change', function () {
+      var picked = Array.prototype.slice.call(input.files).slice(0, Math.max(0, max - files.length));
+      box.classList.add('is-busy');
+      Promise.all(picked.map(shrink)).then(function (done) {
+        files = files.concat(done).slice(0, max);
+        box.classList.remove('is-busy');
+        sync();
+      });
+    });
+  });
+
   // Mobilní menu
   var toggle = document.querySelector('.nav-toggle');
   var nav = document.getElementById('nav');

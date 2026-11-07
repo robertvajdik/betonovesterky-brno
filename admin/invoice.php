@@ -8,6 +8,7 @@ declare(strict_types=1);
  *   ?list=1                                       přehled faktur
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin-nav.php';
 
 // PUBLIC_DOC = zobrazení pro zákazníka přes soukromý odkaz (pages/track.php ověřil token): jen čtení, bez tlačítek administrace
 if (!defined('PUBLIC_DOC') && empty($_SESSION['admin_id'])) {
@@ -142,7 +143,8 @@ if (isset($_GET['list'])):
 <title><?= te('adm.invoice.list_title') ?> | <?= te('adm.title') ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset('css/admin.css')) ?>">
-</head><body class="admin"><main class="container admin-main">
+</head><body class="admin">
+<?= admin_menu('invoices') ?><main class="container admin-main">
   <p><a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.invoice.back') ?></a></p>
   <h1><?= te('adm.invoice.list_title') ?></h1>
   <?php if (!$rows): ?><p class="muted"><?= te('adm.invoice.list_empty') ?></p><?php else: ?>
@@ -391,6 +393,7 @@ $query = $invoice ? '?id=' . $id . '&edit=1' : ($conId ? '?contract=' . $conId :
 <link rel="stylesheet" href="<?= e(asset('css/admin.css')) ?>">
 </head>
 <body class="admin">
+<?= admin_menu('invoices') ?>
 <main class="container admin-main contract-form">
   <p><a href="<?= e(url('admin/?tab=inquiries')) ?>"><?= te('adm.invoice.back') ?></a> · <a href="<?= e($self . '?list=1') ?>"><?= te('adm.invoice.list_title') ?></a></p>
   <h1><?= $invoice ? te('adm.invoice.edit_title', ['number' => $invoice['number']]) : te('adm.invoice.new_title') ?></h1>

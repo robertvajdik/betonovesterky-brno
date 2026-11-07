@@ -14,6 +14,14 @@ $valid  = (bool) $inq;
 if (!$valid) usleep(300000);                                       // zpomalit hádání odkazů
 $self   = route_url('track') . '?id=' . $id . '&t=' . rawurlencode($token);
 
+if ($valid && isset($_GET['photo'])) {
+    // fotka, kterou zákazník k poptávce přiložil
+    $ph = q("SELECT * FROM inquiry_files WHERE id = ? AND inquiry_id = ?", [(int) $_GET['photo'], $id])->fetch();
+    if ($ph) inquiry_send_photo($ph);
+    http_response_code(404);
+    exit;
+}
+
 if ($valid && (isset($_GET['contract']) || isset($_GET['invoice']))) {
     // dokument k tisku – jen smlouva/faktura patřící k této poptávce
     $isContract = isset($_GET['contract']);
@@ -36,6 +44,7 @@ if ($valid) {
     $title     = t('track.title', ['id' => $id]);
     $data      = json_decode((string) $inq['data'], true) ?: [];
     $msgs      = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$id])->fetchAll();
+    $pics      = inquiry_photos($id);
     $contracts = q("SELECT id, number, created_at FROM contracts WHERE inquiry_id = ? ORDER BY id", [$id])->fetchAll();
     $invoices  = q("SELECT i.id, i.number, i.total, i.due, i.paid_at, i.data FROM invoices i LEFT JOIN contracts c ON c.id = i.contract_id
                     WHERE i.inquiry_id = ? OR c.inquiry_id = ? ORDER BY i.id", [$id, $id])->fetchAll();
@@ -96,6 +105,14 @@ $fmtDate = fn(string $d) => date(lang() === 'en' ? 'j M Y' : 'j. n. Y', strtotim
             <dt><?= e((string) ($d['label'] ?? $k)) ?></dt><dd><?= nl2br(e((string) $d['value'])) ?></dd>
           <?php endforeach; ?>
         </dl>
+        <?php if ($pics): ?>
+          <h3 class="track__sub"><?= te('track.photos') ?></h3>
+          <ul class="track-photos">
+            <?php foreach ($pics as $ph): $src = $self . '&photo=' . $ph['id']; ?>
+              <li><a href="<?= e($src) ?>" target="_blank"><img src="<?= e($src) ?>" alt="<?= e($ph['original']) ?>" loading="lazy"></a></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
       </div>
     </div>
 

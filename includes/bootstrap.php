@@ -46,6 +46,7 @@ require __DIR__ . '/facebook.php';
 require __DIR__ . '/invoice.php';
 require __DIR__ . '/recaptcha.php';
 require __DIR__ . '/mailer.php';
+require __DIR__ . '/inquiry-files.php';
 require __DIR__ . '/migrate.php';
 
 // Po nahrání nové verze doplní chybějící tabulky / texty (jednou, pak už jen porovná číslo verze)

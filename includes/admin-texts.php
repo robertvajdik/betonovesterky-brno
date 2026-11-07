@@ -375,4 +375,6 @@ Způsob odeslání: {transport}',
     'adm.invoice.send_fail' => 'Fakturu se nepodařilo odeslat: {error}',
     'adm.invoice.sent' => 'Faktura byla odeslána na {email}.',
     'adm.invoice.sent_on' => 'odesláno {date} na {email}',
+    'adm.inq.photos' => 'Přiložené fotky',
+    'adm.sec.meta' => 'Klíčová slova a sdílení',
 ];

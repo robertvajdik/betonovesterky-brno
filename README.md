@@ -84,3 +84,8 @@ Bez tokenu se místo příspěvků zobrazí tlačítko, které po kliknutí nač
 
 Token je tajný: patří jen do `config.php` (není v gitu), nikam ho neposílejte.
 Když token přestane platit, web dál ukazuje naposledy stažené příspěvky a chybu zapíše do error logu.
+
+## Fotky k poptávkám (soukromé)
+Fotky, které zákazník přiloží k poptávce, se ukládají do `uploads/private/inquiries/{id}/` a zobrazují se jen přes PHP
+(administrace a soukromý odkaz zákazníka). Apache přímý přístup blokuje v `uploads/.htaccess`.
+**nginx** `.htaccess` nečte – do konfigurace serveru přidejte: `location ^~ /uploads/private/ { deny all; }`

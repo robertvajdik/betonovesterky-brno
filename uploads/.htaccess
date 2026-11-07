@@ -3,3 +3,9 @@
   Require all denied
 </FilesMatch>
 Options -Indexes
+
+# Soukromé soubory zákazníků (fotky k poptávkám) – nikdy přímo z webu, jen přes admin/file.php nebo odkaz s tokenem.
+# Pevné pravidlo pro případ, že se uploads/private/.htaccess nepodaří vytvořit.
+<If "%{REQUEST_URI} =~ m#/uploads/private/#">
+  Require all denied
+</If>
