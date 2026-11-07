@@ -426,13 +426,6 @@ p { margin: 0 0 1em; }
   .msg { max-width: 100%; }
 }
 
-/* Příspěvky z Facebooku na úvodní stránce (načtou se po kliknutí) */
-.fb-feed .btn .icon, .fb-feed .btn svg { vertical-align: -3px; margin-right: .3rem; }
-.fb-feed__box, .fb-feed__frame { width: 100%; max-width: 500px; height: 640px; border: 0; justify-self: end; }
-.fb-feed__box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem; padding: 1.5rem; text-align: center;
-  background: var(--concrete-100) linear-gradient(135deg, var(--concrete-200), var(--concrete-100)); }
-.fb-feed__box p { margin: 0; font-size: .85rem; color: var(--concrete-600); max-width: 34ch; }
-@media (max-width: 760px) { .fb-feed__box, .fb-feed__frame { justify-self: stretch; max-width: none; height: 560px; } }
 
 /* ---------- Mobil: horní lišta v jednom řádku, větší dotykové plochy ---------- */
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -548,3 +541,9 @@ p { margin: 0 0 1em; }
 .fb-follow__text h2 { margin: 0 0 .3rem; font-size: clamp(1.3rem, 3vw, 1.7rem); }
 .fb-follow__text p { margin: 0; color: var(--concrete-600); }
 @media (max-width: 600px) { .fb-follow .btn { width: 100%; } }
+
+/* ---------- Úvod: fotka pod bočním světlem (WebGL, assets/js/hero-light.js) ---------- */
+.hero__gl { position: absolute; top: 0; left: 0; display: block; pointer-events: none;
+  opacity: 0; transition: opacity 1.2s cubic-bezier(.16, 1, .3, 1); }
+.hero__gl.is-on { opacity: 1; }
+.hero__badge { z-index: 2; }

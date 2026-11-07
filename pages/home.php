@@ -35,6 +35,7 @@ $cardGrid = function (array $items, string $class = 'cards'): string {
     </div>
   </div>
 </section>
+<script src="<?= e(asset('js/hero-light.js')) ?>" defer></script>
 
 <section class="section">
   <div class="container">

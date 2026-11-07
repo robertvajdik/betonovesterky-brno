@@ -24,20 +24,6 @@
     });
   });
 
-  // Obsah třetích stran (Facebook) až po kliknutí – bez cookies předem
-  document.querySelectorAll('[data-embed-src]').forEach(function (box) {
-    var btn = box.querySelector('button');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      var f = document.createElement('iframe');
-      f.className = box.getAttribute('data-embed-class') || '';
-      f.src = box.getAttribute('data-embed-src');
-      f.title = box.getAttribute('data-embed-title') || '';
-      f.allow = 'encrypted-media';
-      box.replaceWith(f);
-    });
-  });
-
   // Souhlas s cookies → Google Analytics až po „Povolit měření“ (volba v cookie bs_consent na 180 dní)
   var consent = document.querySelector('[data-consent]');
   if (consent) {
