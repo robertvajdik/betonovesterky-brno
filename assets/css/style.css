@@ -246,7 +246,7 @@ p { margin: 0 0 1em; }
 .rating input:checked ~ label, .rating label:hover, .rating label:hover ~ label { color: var(--accent); }
 .rating input:focus-visible + label { outline: 2px solid var(--accent); }
 
-.contact-card dl { display: grid; grid-template-columns: auto 1fr; gap: .5rem 1.5rem; margin: 0 0 2rem; }
+.contact-card dl { display: grid; grid-template-columns: auto 1fr; gap: .5rem 1.5rem; margin: 0 0 2rem; align-items: start; }
 .contact-card dt { font-weight: 700; color: var(--ink); }
 .contact-card dd { margin: 0; overflow-wrap: anywhere; }
 .map { width: 100%; aspect-ratio: 4 / 3; border: 0; filter: grayscale(1); }
@@ -261,6 +261,10 @@ p { margin: 0 0 1em; }
 .contact-action:hover { background: var(--ink); color: var(--white); }
 .contact-action--primary { background: var(--accent); border-color: var(--accent); color: var(--white); }
 .contact-action--primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.contact-action--wa { grid-column: 1 / -1; }
+.contact-action--wa .icon, .contact-action--wa svg { color: #1da851; }
+.contact-action--wa:hover .icon, .contact-action--wa:hover svg { color: #25d366; }
+.map__links { margin: .5rem 0 0; font-size: .85rem; text-align: right; }
 .contact-card address { font-style: normal; }
 .contact__nav { margin-top: .4rem; font-size: .9rem; }
 .field__label .req { color: var(--accent-dark); }
@@ -279,6 +283,9 @@ p { margin: 0 0 1em; }
 .reviews { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1.25rem; }
 .review { margin: 0; background: var(--white); padding: 1.5rem; border: 1px solid var(--concrete-200); }
 .review footer { font-size: .9rem; color: var(--concrete-600); }
+.review__title { font-size: 1.05rem; margin: 0 0 .5rem; }
+.reviews-source { margin: .6rem 0 0; font-size: .95rem; color: var(--concrete-600); }
+.reviews-source a { color: var(--accent-dark); }
 .stars { color: var(--accent); letter-spacing: .1em; }
 
 /* Floating call button (mobile) */
@@ -367,7 +374,8 @@ p { margin: 0 0 1em; }
 }
 
 /* ---------- Zákaznický účet ---------- */
-.auth { max-width: 480px; }
+/* Přihlášení / registrace: formulář zarovnaný vlevo pod nadpisem, ne uprostřed */
+.auth > .form, .auth > .panel { max-width: 480px; }
 .auth__links { margin: 0; font-size: .92rem; line-height: 1.8; }
 .account-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
 .account-head .btn .icon { margin-right: .3rem; }
@@ -380,13 +388,13 @@ p { margin: 0 0 1em; }
 .link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-dark); text-decoration: underline; cursor: pointer; }
 .empty { text-align: center; }
 .req-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
-.req { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; background: var(--white); border: 1px solid var(--concrete-200);
+.req-card { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; background: var(--white); border: 1px solid var(--concrete-200);
   text-decoration: none; color: var(--ink); border-radius: var(--radius); transition: border-color .2s; }
-.req:hover { border-color: var(--accent); }
-.req--unread { border-color: var(--accent); }
-.req__main { display: grid; gap: .2rem; min-width: 0; }
-.req__main .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
-.req__side { display: grid; justify-items: end; gap: .25rem; text-align: right; font-size: .85rem; flex: 0 0 auto; }
+.req-card:hover { border-color: var(--accent); }
+.req-card--unread { border-color: var(--accent); }
+.req-card__main { display: grid; gap: .2rem; min-width: 0; }
+.req-card__main .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.req-card__side { display: grid; justify-items: end; gap: .25rem; text-align: right; font-size: .85rem; flex: 0 0 auto; }
 .badge-new { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-dark); }
 .status { display: inline-block; font-size: .75rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; background: var(--concrete-100); color: var(--ink); white-space: nowrap; }
 .status--new { background: #f3e1d6; color: #7a3d1e; }
@@ -411,9 +419,55 @@ p { margin: 0 0 1em; }
 .btn--danger { background: #a3321f; border-color: #a3321f; color: #fff; }
 .btn--danger:hover { background: #7e2516; border-color: #7e2516; }
 @media (max-width: 600px) {
-  .req { flex-direction: column; }
-  .req__side { justify-items: start; text-align: left; grid-auto-flow: column; justify-content: start; align-items: center; gap: .6rem; }
+  .req-card { flex-direction: column; }
+  .req-card__side { justify-items: start; text-align: left; grid-auto-flow: column; justify-content: start; align-items: center; gap: .6rem; }
   .request .kv { grid-template-columns: 1fr; }
   .acc-tabs__new { margin-left: 0; }
   .msg { max-width: 100%; }
 }
+
+/* Příspěvky z Facebooku na úvodní stránce (načtou se po kliknutí) */
+.fb-feed .btn .icon, .fb-feed .btn svg { vertical-align: -3px; margin-right: .3rem; }
+.fb-feed__box, .fb-feed__frame { width: 100%; max-width: 500px; height: 640px; border: 0; justify-self: end; }
+.fb-feed__box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem; padding: 1.5rem; text-align: center;
+  background: var(--concrete-100) linear-gradient(135deg, var(--concrete-200), var(--concrete-100)); }
+.fb-feed__box p { margin: 0; font-size: .85rem; color: var(--concrete-600); max-width: 34ch; }
+@media (max-width: 760px) { .fb-feed__box, .fb-feed__frame { justify-self: stretch; max-width: none; height: 560px; } }
+
+/* ---------- Mobil: horní lišta v jednom řádku, větší dotykové plochy ---------- */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (max-width: 600px) {
+  .topbar .topbar__mail { display: none; }                 /* .topbar a { display } výše má vyšší specifitu */
+  .topbar__inner { flex-wrap: nowrap; gap: 0 .6rem; padding-top: 0; padding-bottom: 0; }
+  .topbar a { min-height: 40px; }
+  .topbar__phone { margin-right: auto; font-weight: 600; }
+  .topbar__social { padding: 0 .4rem; min-width: 32px; justify-content: center; }
+  .topbar__account span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .topbar__account { padding: 0 .4rem; }
+}
+@media (max-width: 900px) {
+  /* plovoucí tlačítko Zavolat: ne na stránce Kontakt (má vlastní velké tlačítko) a ne při psaní do formuláře */
+  body:has(.contact-actions) .call-fab,
+  body:has(input:focus, textarea:focus, select:focus) .call-fab { display: none; }
+  .footer__bottom { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }   /* nepřekryje ho tlačítko Zavolat */
+}
+@media (max-width: 600px) {
+  /* odkazy v patičce: dotyková plocha alespoň 40 px */
+  .footer li a, .footer__bottom a { display: inline-block; padding: .55rem 0; }
+  .footer li { margin: 0; }
+  .footer li.has-icon { align-items: center; }
+  .footer li.has-icon > .icon { margin-top: 0; }
+  .contact-card dd a { display: inline-block; padding: .35rem 0; }
+}
+
+/* ---------- Příspěvky z Facebooku (stažené serverem) ---------- */
+.fb-posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; }
+.fb-post { display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--concrete-200); min-width: 0; }
+.fb-post__img { display: block; aspect-ratio: 4 / 3; overflow: hidden; background: var(--concrete-100); }
+.fb-post__img img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+.fb-post__img:hover img { transform: scale(1.03); }
+.fb-post__body { display: flex; flex-direction: column; gap: .5rem; padding: 1.1rem 1.25rem 1.25rem; flex: 1; }
+.fb-post__body p { margin: 0; overflow-wrap: anywhere; }
+.fb-post__date { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-dark); }
+.fb-post__more { margin-top: auto; padding-top: .3rem; font-weight: 700; font-size: .9rem; color: var(--ink); }
+@media (max-width: 600px) { .fb-post__more { padding: .6rem 0 .1rem; } }

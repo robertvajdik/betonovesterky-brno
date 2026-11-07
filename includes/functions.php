@@ -114,6 +114,16 @@ function route_url(string $name, ?string $lang = null): string
     return lurl(ROUTES[$name][$lang === 'en' ? 1 : 0], $lang);
 }
 
+/** Odkaz na chat ve WhatsAppu (prázdné číslo v Nastavení = '') s předvyplněnou zprávou */
+function whatsapp_url(): string
+{
+    $n = preg_replace('~\D~', '', site('whatsapp'));
+    if (strlen($n) < 8) return '';
+    if (strlen($n) === 9) $n = '420' . $n;              // české číslo bez předvolby
+    $msg = t('contact.wa_text');
+    return 'https://wa.me/' . $n . ($msg !== '' && $msg !== 'contact.wa_text' ? '?text=' . rawurlencode($msg) : '');
+}
+
 /** Zásady ochrany osobních údajů: externí odkaz z nastavení, jinak vlastní stránka webu */
 function privacy_url(): string
 {

@@ -42,6 +42,7 @@ require __DIR__ . '/functions.php';
 require __DIR__ . '/schema.php';
 require __DIR__ . '/icons.php';
 require __DIR__ . '/customer.php';
+require __DIR__ . '/facebook.php';
 require __DIR__ . '/migrate.php';
 
 // Po nahrání nové verze doplní chybějící tabulky / texty (jednou, pak už jen porovná číslo verze)

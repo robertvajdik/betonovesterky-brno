@@ -1,0 +1,17 @@
+<?php
+// Hodnocení převzatá z profilu na nejremeslnici.cz (vloží je migrace v8, jen pokud ještě v DB nejsou).
+// Bez počtu hvězd – zdroj je neuvádí, proto se u nich hvězdy nezobrazují ani nezapočítávají do průměru.
+// Prázdné jméno = autor neuveden.
+return [
+    ['Betonová stěrka na krb', 'Jsme moc spokojení s odvedenou prací od pana Tomáše Rückera. Přesně nám vytvořil dílo, dle našich požadavků a představ. Můžeme doporučit!', 'Lukas P.', '2023-06-27'],
+    ['Aplikace dekorativní stěrky', 'S výsledkem práce jsme spokojení. S panem Rückerem výborná komunikace, skvěle odvedená práce. Spolupráce bude pokračovat.', 'Marta K.', '2019-08-13'],
+    ['Malířské práce 1+1', "Profesionální přístup. Před vlastní realizací pan Rücker obhlídl stav a na základě toho stanovil cenu, která byla dodržena. Provedení dle dohody, z prací jsem maximálně spokojen včetně čistoty po skončení prací.\nTermíny byly dodrženy.", 'Vítězslav S.', '2018-06-10'],
+    ['Malířské práce', 'Pan Rücker navrhl vhodný postup, jak vyřešit náročnější zadání tak, aby se cena příliš nenavyšovala. Jednalo se o byt v pronájmu, kterého nejsem majitelka, kde už bylo několik vrstev malby po bývalých nájemnících a stop po neodborných zásazích včetně různých nerovností po odstraněných poličkách a odlupující se omítky. Přípravu stěn měl hotovou rychle a zbyl i čas na další opravu drolícího se schodku mezi místnostmi (rekonstrukce a vhodný nátěr) a nezbytnou korekci stropu ve druhém bytě, jak jsem žádala. Celá práce zabrala 4 dny.', 'Zuzana M.', '2018-06-07'],
+    ['Vymalování 2+kk (50m2)', 'Naprosto profesionální přístup. Pan Rücker přijel i na vlastní náklady byt obhlédnout, domluvit se na postupu, či zda bude třeba oškrábat stěny. Také navrhl místa která bylo vhodné speciálně ošetřit, aby nedošlo k umaštění (okolí sporáku).', 'Miroslav S.', '2017-10-26'],
+    ['Malířské práce (rodinný domek)', 'S realizací naprostá spokojenost, sjednaný termín i dohodnutá cena dodrženy, komunikace při sjednávání zakázky i v průběhu realizace věcná a bez problémů.', '', '2017-06-19'],
+    ['Výmalba celého bytu 3+kk', 'Velmi dobrá komunikace, dodržen termín dodání, závady jsme neobjevili, dobré poradenství ohledně údržby.', 'Magda S.', '2017-06-14'],
+    ['Realizace stěrky v interiéru bytu', "Celkově spokojenost s výsledkem, pan Rucker je vstřícný, komunikuje a snaží se řešit operativně i potíže v našem případě s uchycením krytek vypínačů po nánosu vícevrstevné stěrky.\nUrčitě mohu doporučit.", 'Jan P.', '2017-05-11'],
+    ['Malování pokoje a chodby', 'Pan Rucker je velmi profesionální řemeslník a milý člověk. Vedle výmalby byl také nad rámec sjednané práce schopný a ochotný opravit práci po zedníkovi, tak aby konečný výsledek mohl být dokonalý. VELKÝ DÍK, VŘELE DOPORUČUJI!', 'Veronika T.', '2017-01-13'],
+    ['Vymalování pokojů', "Pan Rucker jednal velmi vstřícně. Vše proběhlo přesně dle domluvy. Práce je provedena velice precizně, zejména opravy zdí před finálním nátěrem. Z důvodu velkého množství oprav hrozilo zpoždění termínu dokončení zakázky, ale pan Rucker okamžitě domluvil spolupráci s kolegou a vše proběhlo báječně. Místnost nám předal čistou s minimální nutností úklidu.\nMůžu jen doporučit.", 'Haitmarová P.', '2016-02-18'],
+    ['Vyrovnání stěn a vymalování', 'Dohodnutý termín byl dodržen, komunikace s dodavatelem naplnila moje očekávání a po realizaci celého díla se zatím žádná viditelná vada neobjevila, takže tuhle firmu mohu určitě doporučit :-).', 'Vlastimil S.', '2015-11-19'],
+];

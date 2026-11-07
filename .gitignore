@@ -6,6 +6,7 @@
 !/database/schema.sql
 !/database/import-original.sql
 !/database/migrate.sql
+!/database/reviews-import.sql
 
 # Generované soubory (vytváří administrace)
 /robots.txt

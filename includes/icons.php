@@ -20,7 +20,8 @@ function icon(string $name, int $size = 18, string $class = ''): string
         'facebook'  => [$f, '<path d="M13.5 22v-8.2h2.8l.4-3.3h-3.2V8.4c0-.95.27-1.6 1.63-1.6h1.72V3.86A23 23 0 0 0 14.35 3.7c-2.47 0-4.15 1.5-4.15 4.27v2.53H7.4v3.3h2.8V22z"/>'],
         'instagram' => [$s, '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>'],
         'logout'    => [$s, '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/>'],
-        'plus'      => [$s, '<path d="M12 5v14M5 12h14"/>'],
+        'whatsapp'  => [$s, '<path d="M3.5 20.5l1.3-4.3A8.6 8.6 0 1 1 8 19.3z"/><path d="M9 8.6c0 3.2 2.3 5.9 5.6 6.6l1.2-1.3-1.9-1.1-.9.8a4.4 4.4 0 0 1-2.4-2.4l.8-.9L10.3 8.4z" stroke-width="1.4"/>'],
+        'plus'      => [$s,'<path d="M12 5v14M5 12h14"/>'],
     ];
     if (!isset($paths[$name])) return '';
     [$attr, $body] = $paths[$name];

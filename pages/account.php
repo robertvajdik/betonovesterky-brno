@@ -231,12 +231,12 @@ $crumbs = $inq ? [[t('acc.title'), $self], [$title, null]] : [[$title, null]];
         <ul class="req-list">
           <?php foreach ($rows as $r): $data = json_decode((string) $r['data'], true) ?: []; $svc = $data['service']['value'] ?? ''; ?>
             <li>
-              <a href="<?= e($self . '?id=' . $r['id']) ?>" class="req<?= $r['unread'] ? ' req--unread' : '' ?>">
-                <span class="req__main">
+              <a href="<?= e($self . '?id=' . $r['id']) ?>" class="req-card<?= $r['unread'] ? ' req-card--unread' : '' ?>">
+                <span class="req-card__main">
                   <strong><?= te('acc.request', ['id' => $r['id']]) ?><?= $svc !== '' ? ' · ' . e($svc) : '' ?></strong>
                   <span class="muted"><?= e(mb_strimwidth((string) ($r['message'] ?? ''), 0, 120, '…')) ?></span>
                 </span>
-                <span class="req__side">
+                <span class="req-card__side">
                   <span class="status status--<?= e($r['status']) ?>"><?= e(status_label($r['status'])) ?></span>
                   <span class="muted"><?= e($fmt($r['created_at'])) ?><?= $r['msgs'] ? ' · ' . (int) $r['msgs'] . ' ✉' : '' ?></span>
                   <?php if ($r['unread']): ?><span class="badge-new"><?= te('acc.unread') ?></span><?php endif; ?>

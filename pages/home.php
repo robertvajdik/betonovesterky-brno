@@ -97,4 +97,50 @@ $cardGrid = function (array $items, string $class = 'cards'): string {
 </section>
 <?php endif; ?>
 
+<?php $fb = site('facebook'); $fbPosts = prop_bool('site.fb_feed') ? fb_posts(6) : []; ?>
+<?php if ($fbPosts): /* příspěvky stažené serverem (Graph API) – návštěvník se k Facebooku nepřipojuje */ ?>
+<section class="section section--tint">
+  <div class="container">
+    <div class="section__head section__head--row">
+      <div>
+        <h2><?= te('home.fb_title') ?></h2>
+        <p class="muted"><?= te('home.fb_lead') ?></p>
+      </div>
+      <?php if ($fb !== ''): ?><a href="<?= e($fb) ?>" class="link-arrow" target="_blank" rel="noopener"><?= te('home.fb_open') ?></a><?php endif; ?>
+    </div>
+    <div class="fb-posts">
+      <?php foreach ($fbPosts as $p): $url = $p['url'] ?: $fb; ?>
+        <article class="fb-post">
+          <?php if ($p['image']): ?><a href="<?= e($url) ?>" target="_blank" rel="noopener" class="fb-post__img" tabindex="-1" aria-hidden="true"><img src="<?= e(image_url($p['image'])) ?>" alt="" loading="lazy" decoding="async"></a><?php endif; ?>
+          <div class="fb-post__body">
+            <?php if ($p['date']): ?><time datetime="<?= e($p['date']) ?>" class="fb-post__date"><?= e(date(lang() === 'en' ? 'j M Y' : 'j. n. Y', strtotime($p['date']))) ?></time><?php endif; ?>
+            <?php if ($p['text'] !== ''): ?><p><?= e(fb_excerpt($p['text'])) ?></p><?php endif; ?>
+            <a href="<?= e($url) ?>" target="_blank" rel="noopener" class="fb-post__more"><?= te('home.fb_more') ?></a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php elseif (prop_bool('site.fb_feed') && preg_match('~^https://(www\.|m\.)?facebook\.com/~', $fb)):
+  // Bez tokenu: oficiální plugin Facebooku až po kliknutí (Facebook ukládá cookies, potřebuje souhlas)
+  $fbSrc = 'https://www.facebook.com/plugins/page.php?' . http_build_query([
+      'href' => $fb, 'tabs' => 'timeline', 'width' => 500, 'height' => 640, 'small_header' => 'true',
+      'adapt_container_width' => 'true', 'hide_cover' => 'false', 'show_facepile' => 'false', 'locale' => lang() === 'en' ? 'en_GB' : 'cs_CZ',
+  ]); ?>
+<section class="section section--tint">
+  <div class="container split split--top fb-feed">
+    <div>
+      <h2><?= te('home.fb_title') ?></h2>
+      <p class="lead"><?= te('home.fb_lead') ?></p>
+      <a href="<?= e($fb) ?>" class="btn btn--ghost" target="_blank" rel="noopener"><?= icon('facebook', 18) ?> <?= te('home.fb_open') ?></a>
+    </div>
+    <div class="fb-feed__box" data-embed-src="<?= e($fbSrc) ?>" data-embed-title="<?= te('home.fb_title') ?>" data-embed-class="fb-feed__frame">
+      <button type="button" class="btn btn--light"><?= te('home.fb_load') ?></button>
+      <p><?= te('home.fb_note') ?></p>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
 <?php require ROOT_DIR . '/includes/partials/cta.php'; ?>

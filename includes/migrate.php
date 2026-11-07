@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 5;
+const DB_VERSION = 11;
 
 function db_migrate(): void
 {
@@ -61,6 +61,32 @@ function db_migrate(): void
         INDEX idx_msg_inquiry (inquiry_id),
         CONSTRAINT fk_msg_inquiry FOREIGN KEY (inquiry_id) REFERENCES inquiries(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
+
+    // v7: smlouvy o dílo (data smlouvy jako JSON – zůstanou i po smazání poptávky)
+    $try("CREATE TABLE IF NOT EXISTS contracts (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        inquiry_id  INT UNSIGNED NULL,
+        number      VARCHAR(30) NOT NULL UNIQUE,
+        data        MEDIUMTEXT NOT NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME NULL,
+        INDEX idx_contract_inquiry (inquiry_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
+
+    // v8: nadpis hodnocení, hodnocení bez hvězd (rating NULL), import hodnocení z nejremeslnici.cz
+    if (!$hasColumn('reviews', 'title')) {
+        $try("ALTER TABLE reviews ADD title VARCHAR(160) NULL AFTER author");
+    }
+    $try("ALTER TABLE reviews MODIFY rating TINYINT UNSIGNED NULL DEFAULT 5");
+    if ($current < 8 && is_file(ROOT_DIR . '/database/reviews-import.php')) {
+        foreach (require ROOT_DIR . '/database/reviews-import.php' as [$rTitle, $rText, $rAuthor, $rDate]) {
+            $exists = q("SELECT COUNT(*) FROM reviews WHERE author = ? AND DATE(created_at) = ?", [$rAuthor, $rDate])->fetchColumn();
+            if (!$exists) {
+                q("INSERT INTO reviews (author, title, rating, text, lang, is_approved, created_at) VALUES (?,?,NULL,?,'cs',1,?)",
+                  [$rAuthor, $rTitle, $rText, $rDate . ' 12:00:00']);
+            }
+        }
+    }
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';

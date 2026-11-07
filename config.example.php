@@ -22,4 +22,11 @@ return [
 
     // Odesílatel e-mailů webu (null = e-mail firmy z Nastavení). Měl by patřit doméně serveru kvůli SPF.
     'mail_from' => null,
+
+    // Příspěvky z Facebooku na úvodní stránce (web je stahuje sám, 1× za hodinu). Postup získání tokenu: README → Facebook.
+    // Prázdné = místo příspěvků se zobrazí tlačítko, které načte oficiální plugin Facebooku až po kliknutí.
+    'facebook' => [
+        'page_id' => '100063858848240',
+        'token'   => '',          // Page access token (dlouhodobý); nikomu ho neposílejte
+    ],
 ];

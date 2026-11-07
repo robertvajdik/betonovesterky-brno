@@ -66,3 +66,21 @@ Ikonu na plochu telefonu nahrajte v Nastavení → Grafika → „Ikona na ploch
 Dokud soubory nevygenerujete, web je servíruje dynamicky. Tlačítko v **Nastavení → SEO** je zapíše jako statické soubory.
 Volba „Automaticky přegenerovat“ je pak obnoví při každé změně obsahu.
 Sitemap obsahuje CZ i EN adresy s `hreflang`. Pro absolutní URL vyplňte doménu v Nastavení → Firma.
+
+## Facebook – příspěvky na úvodní stránce
+Web si posledních 6 příspěvků stahuje sám (Graph API, 1× za hodinu) a fotky ukládá do `uploads/fb/`.
+Návštěvník se k Facebooku nepřipojuje, takže není potřeba souhlas s cookies. Sekci vypnete v Nastavení → Firma.
+
+Bez tokenu se místo příspěvků zobrazí tlačítko, které po kliknutí načte oficiální plugin Facebooku
+(u stránek s adresou `profile.php?id=…` ale plugin často ukáže jen záhlaví bez příspěvků).
+
+**Získání tokenu (jednorázově, dělá správce Facebook stránky):**
+1. Na https://developers.facebook.com/apps vytvořte aplikaci (typ „Business“ / „Jiné“).
+2. V Nástrojích → **Graph API Explorer** vyberte aplikaci, „Get Page Access Token“ a oprávnění
+   `pages_show_list`, `pages_read_engagement`. Povolte přístup ke stránce.
+3. Krátkodobý token prodlužte v **Access Token Debugger** („Extend Access Token“). Z dlouhodobého
+   uživatelského tokenu pak v Explorer zavolejte `me/accounts` – u stránky je `access_token`, který nevyprší.
+4. Token vložte do `config.php` → `'facebook' => ['page_id' => '100063858848240', 'token' => '…']`.
+
+Token je tajný: patří jen do `config.php` (není v gitu), nikam ho neposílejte.
+Když token přestane platit, web dál ukazuje naposledy stažené příspěvky a chybu zapíše do error logu.

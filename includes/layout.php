@@ -49,6 +49,7 @@ $navLink = function (string $route, string $key) use ($current) {
   <div class="container topbar__inner">
     <?= email_link(site('email'), 'topbar__mail', true) ?>
     <a href="<?= e(tel_href(site('phone'))) ?>" class="topbar__phone"><?= icon('phone', 15) ?><span><?= e(site('phone')) ?></span></a>
+    <?php if ($wa = whatsapp_url()): ?><a href="<?= e($wa) ?>" target="_blank" rel="noopener" class="topbar__social" aria-label="WhatsApp" title="WhatsApp"><?= icon('whatsapp', 16) ?></a><?php endif; ?>
     <?php if (site('facebook')): ?><a href="<?= e(site('facebook')) ?>" target="_blank" rel="noopener" class="topbar__social" aria-label="Facebook"><?= icon('facebook', 16) ?></a><?php endif; ?>
     <?php if (site('instagram')): ?><a href="<?= e(site('instagram')) ?>" target="_blank" rel="noopener" class="topbar__social" aria-label="Instagram"><?= icon('instagram', 16) ?></a><?php endif; ?>
     <?php if (accounts_on()): $cu = customer(); ?>
@@ -140,10 +141,9 @@ $navLink = function (string $route, string $key) use ($current) {
       <ul>
         <li class="has-icon"><?= icon('phone', 16) ?><a href="<?= e(tel_href(site('phone'))) ?>"<?= rdfa('property="telephone" content="' . e(site('phone')) . '"') ?>><?= e(site('phone')) ?></a></li>
         <li class="has-icon"><?= icon('mail', 16) ?><?= email_link(site('email')) ?></li>
+        <?php if ($wa): ?><li class="has-icon"><?= icon('whatsapp', 16) ?><a href="<?= e($wa) ?>" target="_blank" rel="noopener">WhatsApp</a></li><?php endif; ?>
         <li class="has-icon"<?= rdfa('property="address" typeof="PostalAddress"') ?>><?= icon('pin', 16) ?>
-          <span<?= rdfa('property="streetAddress"') ?>><?= e($ap['street']) ?></span><?php if ($ap['city'] !== ''): ?>,
-          <span<?= rdfa('property="postalCode"') ?>><?= e($ap['zip']) ?></span>
-          <span<?= rdfa('property="addressLocality"') ?>><?= e($ap['city']) ?></span><?php endif; ?>
+          <span><span<?= rdfa('property="streetAddress"') ?>><?= e($ap['street']) ?></span><?php if ($ap['city'] !== ''): ?>, <span<?= rdfa('property="postalCode"') ?>><?= e($ap['zip']) ?></span> <span<?= rdfa('property="addressLocality"') ?>><?= e($ap['city']) ?></span><?php endif; ?></span>
           <?php if (schema_on('rdfa')): ?><meta property="addressCountry" content="CZ"><?php endif; ?>
         </li>
       </ul>
