@@ -17,6 +17,10 @@ return [
     // Necháte-li null, cesta se zjistí automaticky (např. '' nebo '/betonovesterky')
     'base_url' => null,
 
+    // Veřejná adresa webu bez lomítka na konci (odkazy v e-mailech, canonical, sitemap).
+    // Prázdné = Nastavení → Firma → Doména webu, případně aktuální adresa.
+    'domain' => '',
+
     // Kam posílat upozornění na novou poptávku (prázdné = jen uložit do DB)
     'notify_email' => 'info@betonovesterky-brno.cz',
 

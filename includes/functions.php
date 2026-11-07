@@ -151,7 +151,9 @@ function item_url(array $row, ?string $lang = null): string
 
 function abs_url(string $path): string
 {
-    $domain = rtrim(site('domain'), '/');
+    // adresa webu: config.php → 'domain' (má přednost), jinak Nastavení → Firma → Doména webu, jinak aktuální adresa požadavku
+    global $CONFIG;
+    $domain = rtrim((string) ($CONFIG['domain'] ?? '') ?: site('domain'), '/');
     if ($domain === '') {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $domain = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');

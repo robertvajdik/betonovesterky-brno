@@ -733,3 +733,6 @@ UPDATE properties SET value_en = 'Contact Tomáš Rücker – concrete finishes 
 INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 ('adm.inq.link_no_email', 'adm', 'line', NULL, 'Poptávka nemá platný e-mail zákazníka – odkaz nelze poslat.', '', 1200),
 ('adm.inq.link_sent_to', 'adm', 'line', NULL, 'Odkaz na poptávku byl odeslán na {email}.', '', 1201);
+
+-- v25: e-maily – doslovné \n z dřívější verze převést na konce řádků
+UPDATE properties SET value_cs = REPLACE(value_cs, '\\n', '\n'), value_en = REPLACE(value_en, '\\n', '\n') WHERE (pkey LIKE 'mail.%' OR pkey = 'adm.mail.test_body') AND (value_cs LIKE '%\\\\n%' OR value_en LIKE '%\\\\n%');

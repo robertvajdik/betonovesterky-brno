@@ -191,7 +191,9 @@ function send_customer_mail(string $to, string $lang, string $key, array $vars):
     $prev = lang();
     lang($lang);
     $vars += ['site' => site('name')];
-    $ok = send_mail($to, t("mail.{$key}_subject", $vars), t("mail.{$key}_body", $vars), $GLOBALS['CONFIG']['notify_email'] ?? null);
+    // texty e-mailů: doslovné „\n“ (starší import do DB) převést na skutečné konce řádků
+    $nl = fn(string $s) => str_replace(['\r\n', '\n'], "\n", $s);
+    $ok = send_mail($to, trim(str_replace('\n', ' ', t("mail.{$key}_subject", $vars))), $nl(t("mail.{$key}_body", $vars)), $GLOBALS['CONFIG']['notify_email'] ?? null);
     lang($prev);
     return $ok;
 }
