@@ -1,9 +1,23 @@
 .admin { background: var(--concrete-100); }
 .admin-login { max-width: 420px; margin: 10vh auto; }
+/* Menu administrace: na mobilu horní lišta, od 900 px levý sloupec */
 .admin-bar { background: var(--ink); color: var(--white); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem 1rem; padding: .7rem var(--gutter); position: sticky; top: 0; z-index: 10; }
 .admin-bar nav { display: flex; gap: .2rem; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
 .admin-bar a { color: var(--concrete-200); text-decoration: none; padding: .4rem .7rem; border-radius: var(--radius); font-size: .9rem; white-space: nowrap; }
 .admin-bar a:hover, .admin-bar a.is-active { background: rgba(255,255,255,.12); color: var(--white); }
+.admin-bar a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@media (min-width: 900px) {
+  .admin:has(> .admin-bar) { display: grid; grid-template-columns: 232px minmax(0, 1fr); align-items: start; }
+  .admin-bar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 1.5rem; height: 100vh; height: 100dvh; padding: 1.4rem .9rem; overflow-y: auto; }
+  .admin-bar > strong { font-family: var(--font-head); font-size: 1.05rem; line-height: 1.25; padding: 0 .7rem; }
+  .admin-bar nav { flex-direction: column; flex: 1; gap: .15rem; overflow: visible; }
+  .admin-bar a { display: block; padding: .6rem .8rem; font-size: .93rem; border-left: 3px solid transparent; border-radius: 0 var(--radius) var(--radius) 0; }
+  .admin-bar a.is-active { border-left-color: var(--accent); font-weight: 700; }
+  /* Web ↗ a Odhlásit dolů, oddělené čarou */
+  .admin-bar nav a[target="_blank"] { margin-top: auto; border-top: 1px solid rgba(255,255,255,.12); padding-top: .9rem; border-radius: 0; }
+  .admin-main { margin-inline: 0; max-width: 1200px; width: 100%; }
+}
 .admin-main { padding-top: 1.5rem; padding-bottom: 4rem; }
 .admin-main h1 { font-size: 1.7rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .admin-main .panel { margin-bottom: 1.5rem; }
@@ -65,3 +79,7 @@ code { background: var(--concrete-100); padding: 0 .3rem; border-radius: 2px; fo
   .kv { grid-template-columns: 1fr; }
   .kv dd { margin-bottom: .4rem; }
 }
+.thread--admin { margin: .6rem 0; }
+.reply { margin: .6rem 0; }
+.reply summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+.reply .form { margin-top: .6rem; max-width: 640px; }

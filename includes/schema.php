@@ -157,17 +157,18 @@ function email_protected(): bool
     return (string) (props()['site.email_protect']['value_cs'] ?? '1') === '1';
 }
 
-function email_link(string $email, string $class = ''): string
+function email_link(string $email, string $class = '', bool $withIcon = false): string
 {
     if ($email === '') return '';
-    $cls = $class !== '' ? ' class="' . e($class) . '"' : '';
+    $cls  = $class !== '' ? ' class="' . e($class) . '"' : '';
+    $ico  = $withIcon ? icon('mail', 15) : '';
     if (!email_protected()) {
-        return '<a href="mailto:' . e($email) . '"' . $cls . '>' . e($email) . '</a>';
+        return '<a href="mailto:' . e($email) . '"' . $cls . '>' . $ico . '<span>' . e($email) . '</span></a>';
     }
     $code = base64_encode(strrev($email));
     $fallback = '';
     foreach (preg_split('//u', str_replace(['@', '.'], [' [at] ', ' [dot] '], $email), -1, PREG_SPLIT_NO_EMPTY) as $ch) {
         $fallback .= '&#' . mb_ord($ch) . ';';
     }
-    return '<a href="#" data-m="' . e($code) . '" rel="nofollow"' . $cls . '>' . $fallback . '</a>';
+    return '<a href="#" data-m="' . e($code) . '" rel="nofollow"' . $cls . '>' . $ico . '<span data-mail-text>' . $fallback . '</span></a>';
 }

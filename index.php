@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Vestavěný PHP server: statické soubory servíruj přímo
-if (PHP_SAPI === 'cli-server') {
+if (PHP_SAPI === 'cli-server' && !defined('FORCE_404')) {
     $f = str_replace('\\', '/', __DIR__) . parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $dirIndex = rtrim($f, '/') . '/index.php';
     $self = str_replace('\\', '/', __FILE__);
@@ -24,6 +24,11 @@ try {
     if ($slug === 'robots.txt') {
         header('Content-Type: text/plain; charset=UTF-8');
         exit(build_robots());
+    }
+    if ($slug === 'manifest.webmanifest' || $slug === 'en/manifest.webmanifest') {
+        if ($slug !== 'manifest.webmanifest') lang('en');
+        header('Content-Type: application/manifest+json; charset=UTF-8');
+        exit(build_manifest());
     }
     if ($slug === 'sitemap.xml') {
         header('Content-Type: application/xml; charset=UTF-8');
@@ -69,6 +74,7 @@ try {
     $current  = $page;
     $currentSlug = $category['slug'] ?? '';
     $schema   = [];                    // JSON-LD uzly přidané stránkou
+    $noindex  = false;                 // soukromé stránky (účet) nastaví true
 
     ob_start();
     require __DIR__ . "/pages/{$page}.php";

@@ -1,0 +1,25 @@
+# Přístupy k databázi – vzor je v config.example.php
+/config.php
+
+# Zálohy / exporty databáze z hostingu (obsahují data zákazníků)
+/database/*.sql
+!/database/schema.sql
+!/database/import-original.sql
+!/database/migrate.sql
+
+# Generované soubory (vytváří administrace)
+/robots.txt
+/sitemap.xml
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/.htaccess
+!/uploads/orig/
+/uploads/icons/
+
+# Systém / editory
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.log

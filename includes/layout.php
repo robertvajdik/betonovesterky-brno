@@ -17,8 +17,8 @@ $navLink = function (string $route, string $key) use ($current) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= e($fullTitle) ?></title>
 <meta name="description" content="<?= e($metaDesc) ?>">
-<?php $is404 = $current === '404'; ?>
-<?php if ($is404 || !prop_bool('seo.indexing')): ?><meta name="robots" content="noindex<?= $is404 ? ', follow' : '' ?>"><?php endif; ?>
+<?php $is404 = $current === '404'; $private = !empty($noindex); ?>
+<?php if ($is404 || $private || !prop_bool('seo.indexing')): ?><meta name="robots" content="noindex<?= $is404 ? ', follow' : '' ?>"><?php endif; ?>
 <?php if (!$is404): ?>
 <link rel="canonical" href="<?= e(abs_url($alt[lang()])) ?>">
 <link rel="alternate" hreflang="cs" href="<?= e(abs_url($alt['cs'])) ?>">
@@ -31,9 +31,12 @@ $navLink = function (string $route, string $key) use ($current) {
 <meta property="og:type" content="website">
 <meta property="og:locale" content="<?= lang() === 'en' ? 'en_GB' : 'cs_CZ' ?>">
 <?php if (!$is404): ?><meta property="og:url" content="<?= e(abs_url($alt[lang()])) ?>">
-<?= jsonld($current, abs_url($alt[lang()]), $fullTitle, $metaDesc, $ogAbs, $schema ?? []) ?>
+<?= $private ? '' : jsonld($current, abs_url($alt[lang()]), $fullTitle, $metaDesc, $ogAbs, $schema ?? []) ?>
 <?php endif; ?>
 <?php if ($favicon): ?><link rel="icon" href="<?= e($favicon) ?>"><?php endif; ?>
+<?php if ($touch = app_icon_url(180)): ?><link rel="apple-touch-icon" href="<?= e($touch) ?>"><?php endif; ?>
+<link rel="manifest" href="<?= e(lang() === 'en' ? url('en/manifest.webmanifest') : url('manifest.webmanifest')) ?>">
+<meta name="apple-mobile-web-app-title" content="<?= e(mb_substr(site('name'), 0, 20)) ?>">
 <meta name="theme-color" content="#1f1e1c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,10 +47,13 @@ $navLink = function (string $route, string $key) use ($current) {
 
 <div class="topbar">
   <div class="container topbar__inner">
-    <?= email_link(site('email'), 'topbar__mail') ?>
-    <a href="<?= e(tel_href(site('phone'))) ?>"><?= e(site('phone')) ?></a>
-    <?php if (site('facebook')): ?><a href="<?= e(site('facebook')) ?>" target="_blank" rel="noopener">Facebook</a><?php endif; ?>
-    <?php if (site('instagram')): ?><a href="<?= e(site('instagram')) ?>" target="_blank" rel="noopener">Instagram</a><?php endif; ?>
+    <?= email_link(site('email'), 'topbar__mail', true) ?>
+    <a href="<?= e(tel_href(site('phone'))) ?>" class="topbar__phone"><?= icon('phone', 15) ?><span><?= e(site('phone')) ?></span></a>
+    <?php if (site('facebook')): ?><a href="<?= e(site('facebook')) ?>" target="_blank" rel="noopener" class="topbar__social" aria-label="Facebook"><?= icon('facebook', 16) ?></a><?php endif; ?>
+    <?php if (site('instagram')): ?><a href="<?= e(site('instagram')) ?>" target="_blank" rel="noopener" class="topbar__social" aria-label="Instagram"><?= icon('instagram', 16) ?></a><?php endif; ?>
+    <?php if (accounts_on()): $cu = customer(); ?>
+      <a href="<?= e(route_url($cu ? 'account' : 'login')) ?>" class="topbar__account"><?= icon('user', 15) ?><span><?= te($cu ? 'nav.account' : 'nav.login') ?></span></a>
+    <?php endif; ?>
     <a href="<?= e($alt[$other]) ?>" class="lang-switch" hreflang="<?= $other ?>" lang="<?= $other ?>"><?= $other === 'en' ? 'EN' : 'CZ' ?></a>
   </div>
 </div>
@@ -86,7 +92,9 @@ $navLink = function (string $route, string $key) use ($current) {
         <?= $navLink('pricing', 'nav.pricing') ?>
         <li><a href="<?= e(route_url('contact')) ?>" class="btn btn--small"><?= te('nav.contact') ?></a></li>
         <li class="nav__mobile-extra">
-          <a href="<?= e(tel_href(site('phone'))) ?>"><?= e(site('phone')) ?></a>
+          <a href="<?= e(tel_href(site('phone'))) ?>"><?= icon('mobile') ?> <?= e(site('phone')) ?></a>
+          <?= email_link(site('email'), '', true) ?>
+          <?php if (accounts_on()): ?><a href="<?= e(route_url(customer() ? 'account' : 'login')) ?>"><?= icon('user') ?> <?= te(customer() ? 'nav.account' : 'nav.login') ?></a><?php endif; ?>
           <a href="<?= e($alt[$other]) ?>" hreflang="<?= $other ?>"><?= $other === 'en' ? 'English' : 'Česky' ?></a>
         </li>
       </ul>
@@ -130,9 +138,9 @@ $navLink = function (string $route, string $key) use ($current) {
       <h4><?= te('footer.contact') ?></h4>
       <?php if (schema_on('rdfa')): ?><meta property="name" content="<?= e(site('name')) ?>"><link property="url" href="<?= e(abs_url(route_url('home'))) ?>"><?php endif; ?>
       <ul>
-        <li><a href="<?= e(tel_href(site('phone'))) ?>"<?= rdfa('property="telephone" content="' . e(site('phone')) . '"') ?>><?= e(site('phone')) ?></a></li>
-        <li><?= email_link(site('email')) ?></li>
-        <li<?= rdfa('property="address" typeof="PostalAddress"') ?>>
+        <li class="has-icon"><?= icon('phone', 16) ?><a href="<?= e(tel_href(site('phone'))) ?>"<?= rdfa('property="telephone" content="' . e(site('phone')) . '"') ?>><?= e(site('phone')) ?></a></li>
+        <li class="has-icon"><?= icon('mail', 16) ?><?= email_link(site('email')) ?></li>
+        <li class="has-icon"<?= rdfa('property="address" typeof="PostalAddress"') ?>><?= icon('pin', 16) ?>
           <span<?= rdfa('property="streetAddress"') ?>><?= e($ap['street']) ?></span><?php if ($ap['city'] !== ''): ?>,
           <span<?= rdfa('property="postalCode"') ?>><?= e($ap['zip']) ?></span>
           <span<?= rdfa('property="addressLocality"') ?>><?= e($ap['city']) ?></span><?php endif; ?>
@@ -143,12 +151,12 @@ $navLink = function (string $route, string $key) use ($current) {
   </div>
   <div class="container footer__bottom">
     <span>© <?= date('Y') ?> <?= e(site('owner')) ?> · <?= te('footer.ico') ?> <?= e(site('ico')) ?></span>
-    <?php if (site('gdpr_url')): ?><a href="<?= e(site('gdpr_url')) ?>"><?= te('footer.privacy') ?></a><?php endif; ?>
+    <a href="<?= e(privacy_url()) ?>"<?= $current === 'privacy' ? ' aria-current="page"' : '' ?>><?= te('footer.privacy') ?></a>
   </div>
 </footer>
 
 <a href="<?= e(tel_href(site('phone'))) ?>" class="call-fab" aria-label="<?= te('contact.phone') ?>">
-  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>
+  <?= icon('phone', 24) ?>
 </a>
 
 <div class="lightbox" hidden>

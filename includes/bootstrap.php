@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
     session_start();
 }
 
@@ -39,3 +40,9 @@ set_exception_handler(function (Throwable $ex) {
 require __DIR__ . '/db.php';
 require __DIR__ . '/functions.php';
 require __DIR__ . '/schema.php';
+require __DIR__ . '/icons.php';
+require __DIR__ . '/customer.php';
+require __DIR__ . '/migrate.php';
+
+// Po nahrání nové verze doplní chybějící tabulky / texty (jednou, pak už jen porovná číslo verze)
+if (PHP_SAPI !== 'cli' || getenv('BS_MIGRATE')) db_migrate();

@@ -10,6 +10,12 @@ const ROUTES = [
     'reviews'    => ['hodnoceni', 'reviews'],
     'pricing'    => ['cenik', 'pricing'],
     'contact'    => ['kontakt', 'contact'],
+    'privacy'    => ['ochrana-osobnich-udaju', 'privacy-policy'],
+    // zákaznický účet (neindexuje se, není v sitemapě)
+    'login'      => ['prihlaseni', 'login'],
+    'register'   => ['registrace', 'register'],
+    'forgot'     => ['zapomenute-heslo', 'forgot-password'],
+    'account'    => ['muj-ucet', 'my-account'],
 ];
 
 function e(?string $s): string
@@ -106,6 +112,12 @@ function route_url(string $name, ?string $lang = null): string
 {
     $lang ??= lang();
     return lurl(ROUTES[$name][$lang === 'en' ? 1 : 0], $lang);
+}
+
+/** Zásady ochrany osobních údajů: externí odkaz z nastavení, jinak vlastní stránka webu */
+function privacy_url(): string
+{
+    return site('gdpr_url') !== '' ? site('gdpr_url') : route_url('privacy');
 }
 
 /** URL kategorie nebo realizace */
@@ -289,6 +301,10 @@ function render_field(array $f): string
     $ph    = tr($f, 'placeholder');
     $req   = $f['is_required'] ? ' required' : '';
     $val   = post($name, 5000);
+    // přihlášený zákazník: předvyplnit kontaktní údaje z profilu
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && ($c = customer()) && in_array($f['fkey'], ['name', 'email', 'phone', 'location'], true)) {
+        $val = (string) ($c[$f['fkey']] ?? '');
+    }
     $auto  = ['name' => 'name', 'email' => 'email', 'phone' => 'tel'][$f['fkey']] ?? 'off';
     $cls   = $f['is_wide'] || $f['type'] === 'textarea' ? 'field field--wide' : 'field';
 
@@ -307,7 +323,8 @@ function render_field(array $f): string
             return '<label class="check field field--wide"><input type="checkbox" name="' . $name . '" value="1"' . ($val ? ' checked' : '') . $req . '><span>' . $label . '</span></label>';
         default:
             $type  = in_array($f['type'], ['email', 'tel', 'number', 'date'], true) ? $f['type'] : 'text';
-            $extra = $type === 'number' ? ' min="0" step="any" inputmode="decimal"' : '';
+            $extra = $type === 'number' ? ' min="0" step="any" inputmode="decimal"'
+                   : ($type === 'date' ? ' min="' . date('Y-m-d') . '"' : '');
             $input = '<input type="' . $type . '" name="' . $name . '" value="' . e($val) . '" placeholder="' . e($ph) . '" autocomplete="' . $auto . '"' . $extra . $req . '>';
     }
     return '<label class="' . $cls . '">' . $label . $input . '</label>';
@@ -328,6 +345,10 @@ function handle_inquiry(string $source, string $returnUrl): array
         $v = post('f_' . $f['fkey'], $f['type'] === 'textarea' ? 5000 : 300);
         if ($f['type'] === 'select' && $v !== '' && !in_array($v, field_options($f), true)) $v = '';
         if ($f['type'] === 'checkbox') $v = $v !== '' ? '✓' : '';
+        if ($f['type'] === 'date' && $v !== '') {
+            $d = DateTimeImmutable::createFromFormat('!Y-m-d', $v);
+            $v = $d && $d->format('Y-m-d') === $v ? $v : '';
+        }
         if ($f['is_required'] && $v === '') {
             $errors[] = t('form.err_required', ['field' => tr($f, 'label')]);
         }
@@ -336,8 +357,19 @@ function handle_inquiry(string $source, string $returnUrl): array
         }
         $data[$f['fkey']] = ['label' => $f['label_cs'], 'value' => $v];
     }
+    // preferovaný termín: „do“ nesmí být před „od“ (ISO data lze porovnat jako text)
+    $from = $data['term_from']['value'] ?? '';
+    $to   = $data['term_to']['value'] ?? '';
+    if ($from !== '' && $to !== '' && $to < $from) $errors[] = t('form.err_dates');
     if (empty($_POST['gdpr'])) $errors[] = t('form.err_gdpr');
     if ($errors) return $errors;
+
+    // data v e-mailu a administraci česky: 2026-11-07 → 7. 11. 2026
+    foreach ($fields as $f) {
+        if ($f['type'] === 'date' && ($data[$f['fkey']]['value'] ?? '') !== '') {
+            $data[$f['fkey']]['value'] = date('j. n. Y', strtotime($data[$f['fkey']]['value']));
+        }
+    }
 
     $get = fn(string $k) => $data[$k]['value'] ?? '';
     $email = $get('email');
@@ -345,19 +377,27 @@ function handle_inquiry(string $source, string $returnUrl): array
         foreach ($fields as $f) if ($f['type'] === 'email') { $email = $get($f['fkey']); break; }
     }
 
-    q("INSERT INTO inquiries (name, email, phone, location, message, data, source, lang, ip) VALUES (?,?,?,?,?,?,?,?,?)", [
+    $customer = customer();
+    q("INSERT INTO inquiries (customer_id, name, email, phone, location, message, data, source, lang, ip) VALUES (?,?,?,?,?,?,?,?,?,?)", [
+        $customer['id'] ?? null,
         $get('name') ?: '—', $email, $get('phone') ?: null, $get('location') ?: null, $get('message') ?: null,
         json_encode($data, JSON_UNESCAPED_UNICODE), $source, lang(), $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
+    $newId = (int) db()->lastInsertId();
 
     global $CONFIG;
     if (!empty($CONFIG['notify_email'])) {
-        $body = "Nová poptávka z webu ({$source}, " . strtoupper(lang()) . ")\n\n";
+        $body = "Nová poptávka č. {$newId} z webu ({$source}, " . strtoupper(lang()) . ")"
+              . ($customer ? "\nRegistrovaný zákazník: {$customer['name']} <{$customer['email']}>" : '') . "\n\n";
         foreach ($data as $d) if ($d['value'] !== '') $body .= "{$d['label']}: {$d['value']}\n";
-        $headers = "Content-Type: text/plain; charset=UTF-8\r\n" . (filter_var($email, FILTER_VALIDATE_EMAIL) ? "Reply-To: {$email}\r\n" : '');
-        @mail($CONFIG['notify_email'], '=?UTF-8?B?' . base64_encode('Nová poptávka z webu') . '?=', $body, $headers);
+        $body .= "\nAdministrace: " . abs_url(url('admin/'));
+        send_mail($CONFIG['notify_email'], "Nová poptávka č. {$newId} z webu", $body, $email);
     }
 
+    if ($customer) {                                       // zákazník → rovnou na detail poptávky v účtu
+        flash('acc', t('form.thanks'));
+        redirect(route_url('account') . '?id=' . $newId);
+    }
     flash('inquiry', t('form.thanks'));
     redirect($returnUrl . '#formular');
 }
@@ -373,6 +413,7 @@ function sitemap_urls(): array
         $urls[] = ['cs' => abs_url($cs), 'en' => abs_url($en), 'prio' => $prio, 'mod' => $mod];
     };
     foreach (array_keys(ROUTES) as $r) {
+        if (in_array($r, PRIVATE_ROUTES, true)) continue;
         $add(route_url($r, 'cs'), route_url($r, 'en'), $r === 'home' ? '1.0' : '0.6');
     }
     foreach (q("SELECT * FROM categories WHERE is_active = 1 ORDER BY sort")->fetchAll() as $c) {
@@ -410,6 +451,9 @@ function build_robots(): string
     $r .= "Allow: /\n";
     $extra = trim((string) (props()['seo.robots_extra']['value_cs'] ?? ''));
     if ($extra !== '') $r .= str_replace("\r", '', $extra) . "\n";
+    if (accounts_on()) {
+        foreach (PRIVATE_ROUTES as $p) foreach (['cs', 'en'] as $l) $r .= 'Disallow: ' . route_url($p, $l) . "\n";
+    }
     return $r . "\nSitemap: " . abs_url(url('sitemap.xml')) . "\n";
 }
 

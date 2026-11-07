@@ -4,7 +4,7 @@
     try {
       var m = atob(a.getAttribute('data-m')).split('').reverse().join('');
       a.href = 'mailto:' + m;
-      a.textContent = m;
+      (a.querySelector('[data-mail-text]') || a).textContent = m;
       a.removeAttribute('data-m');
     } catch (e) {}
   });
@@ -95,5 +95,20 @@
     var dx = ev.changedTouches[0].clientX - x0;
     if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1));
     x0 = null;
+  });
+})();
+
+// Preferovaný termín: „do“ nejde vybrat dřív než „od“
+(function () {
+  document.querySelectorAll('input[name="f_term_from"]').forEach(function (from) {
+    var to = from.form && from.form.querySelector('input[name="f_term_to"]');
+    if (!to) return;
+    var base = to.min;
+    function sync() {
+      to.min = from.value || base;
+      if (from.value && to.value && to.value < from.value) to.value = from.value;
+    }
+    from.addEventListener('change', sync);
+    sync();
   });
 })();

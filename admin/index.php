@@ -68,6 +68,30 @@ if ($logged && $action !== '') {
             q("UPDATE inquiries SET is_read = 1 - is_read WHERE id = ?", [$id]); back('tab=inquiries');
         case 'inquiry_delete':
             q("DELETE FROM inquiries WHERE id = ?", [$id]); back('tab=inquiries', 'Poptávka smazána.');
+        case 'inquiry_reply':
+            // odpověď zákazníkovi (+ změna stavu); registrovaný ji uvidí v účtu, všem přijde e-mailem
+            $inq = q("SELECT i.*, c.email AS c_email, c.lang AS c_lang FROM inquiries i LEFT JOIN customers c ON c.id = i.customer_id WHERE i.id = ?", [$id])->fetch();
+            if (!$inq) back('tab=inquiries');
+            $status = in_array($_POST['status'] ?? '', INQUIRY_STATUSES, true) ? $_POST['status'] : $inq['status'];
+            $body   = post('body', 10000);
+            q("UPDATE inquiries SET status = ?, is_read = 1, updated_at = NOW() WHERE id = ?", [$status, $id]);
+            q("UPDATE inquiry_messages SET is_read = 1 WHERE inquiry_id = ? AND author = 'customer'", [$id]);
+            $note = 'Stav uložen.';
+            if ($body !== '') {
+                q("INSERT INTO inquiry_messages (inquiry_id, author, body) VALUES (?, 'admin', ?)", [$id, $body]);
+                $to   = $inq['c_email'] ?: $inq['email'];
+                $lang = $inq['c_lang'] ?: $inq['lang'];
+                $vars = ['id' => $id, 'message' => $body, 'status' => '', 'url' => abs_url(route_url('account', $lang)) . '?id=' . $id];
+                $sent = !empty($_POST['notify']) && send_customer_mail($to, $lang, $inq['customer_id'] ? 'reply' : 'reply_guest', $vars);
+                $note = 'Odpověď uložena' . ($sent ? ' a odeslána e-mailem na ' . $to : (!empty($_POST['notify']) ? ' – e-mail se nepodařilo odeslat' : '')) . '.';
+            }
+            back('tab=inquiries#q' . $id, $note);
+
+        // Zákazníci
+        case 'customer_toggle':
+            q("UPDATE customers SET is_active = 1 - is_active WHERE id = ?", [$id]); back('tab=customers');
+        case 'customer_delete':
+            q("DELETE FROM customers WHERE id = ?", [$id]); back('tab=customers', 'Účet smazán, poptávky zůstaly zachovány.');
 
         // Hodnocení
         case 'review_toggle':
@@ -236,6 +260,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
 
 $tabs = [
     'inquiries' => 'Poptávky' . ($unread ? " ($unread)" : ''),
+    'customers' => 'Zákazníci',
     'reviews'   => 'Hodnocení' . ($pending ? " ($pending)" : ''),
     'gallery'   => 'Galerie',
     'pages'     => 'Stránky',
@@ -284,12 +309,24 @@ $tabs = [
 
     <?php /* ================= POPTÁVKY ================= */ if ($tab === 'inquiries'): ?>
       <h1>Poptávky</h1>
-      <?php $rows = q("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 300")->fetchAll(); ?>
+      <?php
+        $sf   = in_array($_GET['status'] ?? '', INQUIRY_STATUSES, true) ? $_GET['status'] : '';
+        $rows = q("SELECT i.*, c.name AS c_name, c.id AS c_id FROM inquiries i LEFT JOIN customers c ON c.id = i.customer_id"
+                . ($sf ? " WHERE i.status = ?" : '') . " ORDER BY i.is_read, COALESCE(i.updated_at, i.created_at) DESC LIMIT 300", $sf ? [$sf] : [])->fetchAll();
+        $stLabels = ['new' => 'Nová', 'in_progress' => 'Řešíme', 'quoted' => 'Nabídka odeslána', 'done' => 'Dokončeno', 'cancelled' => 'Zrušeno'];
+      ?>
+      <nav class="subtabs">
+        <a href="<?= e(admin_url('tab=inquiries')) ?>" class="<?= $sf === '' ? 'is-active' : '' ?>">Vše</a>
+        <?php foreach ($stLabels as $k => $v): ?><a href="<?= e(admin_url("tab=inquiries&status=$k")) ?>" class="<?= $sf === $k ? 'is-active' : '' ?>"><?= e($v) ?></a><?php endforeach; ?>
+      </nav>
       <?php if (!$rows): ?><p class="muted">Zatím žádné poptávky.</p><?php endif; ?>
-      <?php foreach ($rows as $r): $data = json_decode((string) $r['data'], true) ?: []; ?>
-        <article class="item <?= $r['is_read'] ? '' : 'item--new' ?>">
+      <?php foreach ($rows as $r): $data = json_decode((string) $r['data'], true) ?: [];
+            $msgs = q("SELECT * FROM inquiry_messages WHERE inquiry_id = ? ORDER BY created_at, id", [$r['id']])->fetchAll(); ?>
+        <article class="item <?= $r['is_read'] ? '' : 'item--new' ?>" id="q<?= (int) $r['id'] ?>">
           <div class="item__head">
-            <strong><?= e($r['name']) ?></strong>
+            <strong>#<?= (int) $r['id'] ?> <?= e($r['name']) ?></strong>
+            <span class="status status--<?= e($r['status']) ?>"><?= e($stLabels[$r['status']] ?? $r['status']) ?></span>
+            <?php if ($r['c_id']): ?><a href="<?= e(admin_url('tab=customers#c' . $r['c_id'])) ?>" class="badge">účet</a><?php endif; ?>
             <span class="muted"><?= e(date('j. n. Y H:i', strtotime($r['created_at']))) ?> · <?= e($r['source']) ?> · <?= strtoupper(e($r['lang'])) ?></span>
           </div>
           <p><a href="mailto:<?= e($r['email']) ?>"><?= e($r['email']) ?></a>
@@ -303,12 +340,57 @@ $tabs = [
           <?php else: ?>
             <p><?= nl2br(e($r['message'])) ?></p>
           <?php endif; ?>
+          <?php if ($msgs): ?>
+            <ol class="thread thread--admin">
+              <?php foreach ($msgs as $m): ?>
+                <li class="msg msg--<?= e($m['author']) ?><?= $m['author'] === 'customer' && !$m['is_read'] ? ' msg--unread' : '' ?>">
+                  <div class="msg__head"><strong><?= $m['author'] === 'admin' ? 'Vy' : e($r['name']) ?></strong> <span class="muted"><?= e(date('j. n. Y H:i', strtotime($m['created_at']))) ?></span></div>
+                  <p><?= nl2br(e($m['body'])) ?></p>
+                </li>
+              <?php endforeach; ?>
+            </ol>
+          <?php endif; ?>
+          <details class="reply"<?= !$r['is_read'] && $msgs ? ' open' : '' ?>>
+            <summary>Odpovědět / změnit stav</summary>
+            <form method="post" class="form">
+              <?= csrf_field() ?><input type="hidden" name="action" value="inquiry_reply"><input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
+              <label>Stav
+                <select name="status"><?php foreach ($stLabels as $k => $v): ?><option value="<?= $k ?>"<?= $r['status'] === $k ? ' selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select></label>
+              <label>Zpráva zákazníkovi (nepovinné)<textarea name="body" rows="4"></textarea></label>
+              <label class="check"><input type="checkbox" name="notify" value="1" checked><span>Poslat zprávu také e-mailem na <?= e($r['email']) ?><?= $r['c_id'] ? ' (s odkazem do účtu)' : '' ?></span></label>
+              <button class="btn btn--small">Uložit</button>
+            </form>
+          </details>
           <div class="item__actions">
-            <?= btn_post('inquiry_read', (int) $r['id'], $r['is_read'] ? 'Označit jako nové' : 'Označit jako vyřízené') ?>
+            <?= btn_post('inquiry_read', (int) $r['id'], $r['is_read'] ? 'Označit jako nové' : 'Označit jako přečtené') ?>
             <?= btn_post('inquiry_delete', (int) $r['id'], 'Smazat', 'btn btn--small btn--danger', 'Opravdu smazat?') ?>
           </div>
         </article>
       <?php endforeach; ?>
+
+    <?php /* ================= ZÁKAZNÍCI ================= */ elseif ($tab === 'customers'): ?>
+      <h1>Zákazníci</h1>
+      <p class="muted">Registrace zapnete či vypnete v Nastavení → Firma a kontakty.</p>
+      <?php $rows = q("SELECT c.*, (SELECT COUNT(*) FROM inquiries i WHERE i.customer_id = c.id) AS n FROM customers c ORDER BY c.created_at DESC")->fetchAll(); ?>
+      <?php if (!$rows): ?><p class="muted">Zatím se nikdo nezaregistroval.</p><?php else: ?>
+        <div class="table-wrap"><table class="table">
+          <tr><th>Zákazník</th><th>Kontakt</th><th>Poptávky</th><th>Registrace</th><th>Poslední přihlášení</th><th></th></tr>
+          <?php foreach ($rows as $c): ?>
+            <tr id="c<?= (int) $c['id'] ?>"<?= $c['is_active'] ? '' : ' class="item--off"' ?>>
+              <td><strong><?= e($c['name']) ?></strong><?= $c['location'] ? '<br><span class="muted">' . e($c['location']) . '</span>' : '' ?></td>
+              <td><a href="mailto:<?= e($c['email']) ?>"><?= e($c['email']) ?></a> <?= $c['email_verified_at'] ? '<span class="badge">ověřen</span>' : '<span class="muted">neověřen</span>' ?>
+                <?= $c['phone'] ? '<br><a href="' . e(tel_href($c['phone'])) . '">' . e($c['phone']) . '</a>' : '' ?></td>
+              <td><?= (int) $c['n'] ?></td>
+              <td><?= e(date('j. n. Y', strtotime($c['created_at']))) ?> · <?= strtoupper(e($c['lang'])) ?></td>
+              <td><?= $c['last_login'] ? e(date('j. n. Y H:i', strtotime($c['last_login']))) : '—' ?></td>
+              <td class="item__actions">
+                <?= btn_post('customer_toggle', (int) $c['id'], $c['is_active'] ? 'Zablokovat' : 'Povolit') ?>
+                <?= btn_post('customer_delete', (int) $c['id'], 'Smazat', 'btn btn--small btn--danger', 'Smazat účet? Poptávky zůstanou zachovány.') ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </table></div>
+      <?php endif; ?>
 
     <?php /* ================= HODNOCENÍ ================= */ elseif ($tab === 'reviews'): ?>
       <h1>Hodnocení</h1>
@@ -503,9 +585,9 @@ $tabs = [
 
     <?php /* ================= TEXTY CZ/EN ================= */ elseif ($tab === 'texts'): ?>
       <?php
-        $groups = ['nav' => 'Menu a patička', 'home' => 'Úvodní stránka', 'cta' => 'Výzva „Kontaktujte nás“', 'category' => 'Stránky služeb', 'references' => 'Reference', 'reviews' => 'Hodnocení', 'pricing' => 'Ceník', 'contact' => 'Kontakt', 'form' => 'Formulář – hlášky', 'misc' => 'Ostatní'];
+        $groups = ['nav' => 'Menu a patička', 'home' => 'Úvodní stránka', 'cta' => 'Výzva „Kontaktujte nás“', 'category' => 'Stránky služeb', 'references' => 'Reference', 'reviews' => 'Hodnocení', 'pricing' => 'Ceník', 'contact' => 'Kontakt', 'privacy' => 'Ochrana osobních údajů (GDPR)', 'form' => 'Formulář – hlášky', 'acc' => 'Zákaznický účet', 'status' => 'Stavy poptávek', 'mail' => 'E-maily zákazníkům', 'misc' => 'Ostatní'];
         $all = props();
-        foreach ($all as $r) if (!isset($groups[$r['grp']]) && !in_array($r['grp'], ['site', 'images', 'seo'], true)) $groups[$r['grp']] = $r['grp'];
+        foreach ($all as $r) if (!isset($groups[$r['grp']]) && !in_array($r['grp'], ['site', 'images', 'seo', 'sys'], true)) $groups[$r['grp']] = $r['grp'];
         $grp = (string) ($_GET['grp'] ?? 'home');
         if (!isset($groups[$grp])) $grp = 'home';
       ?>

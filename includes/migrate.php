@@ -6,10 +6,11 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 2;
+const DB_VERSION = 5;
 
 function db_migrate(): void
 {
+    if (!props()) return;              // DB nedostupná nebo bez schema.sql – nic k aktualizaci
     $current = (int) (props()['sys.db_version']['value_cs'] ?? 0);
     if ($current >= DB_VERSION) return;
 
