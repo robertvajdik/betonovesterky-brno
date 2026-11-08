@@ -163,7 +163,10 @@
   // Mobilní menu
   var toggle = document.querySelector('.nav-toggle');
   var nav = document.getElementById('nav');
+  var header = document.querySelector('.header');
   function setNav(open) {
+    // menu začíná přesně pod hlavičkou (nad ní může být viditelný topbar)
+    if (open && header) document.documentElement.style.setProperty('--nav-top', Math.round(header.getBoundingClientRect().bottom) + 'px');
     nav.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     document.body.classList.toggle('nav-open', open);
@@ -180,6 +183,25 @@
       var open = li.classList.toggle('is-open');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
+  });
+
+  // Posuvník před / po
+  document.querySelectorAll('[data-compare]').forEach(function (box) {
+    var range = box.querySelector('.compare__range');
+    if (!range) return;
+    function set(v) { box.style.setProperty('--pos', Math.max(0, Math.min(100, v)) + '%'); }
+    range.addEventListener('input', function () { set(+range.value); });
+    // klik / tah kdekoli na fotce (i mimo jezdec)
+    function fromPointer(ev) {
+      var r = box.getBoundingClientRect();
+      var v = Math.round((ev.clientX - r.left) / r.width * 100);
+      range.value = v; set(v);
+    }
+    var drag = false;
+    box.addEventListener('pointerdown', function (ev) { drag = true; fromPointer(ev); });
+    window.addEventListener('pointermove', function (ev) { if (drag) fromPointer(ev); });
+    window.addEventListener('pointerup', function () { drag = false; });
+    window.addEventListener('pointercancel', function () { drag = false; });
   });
 
   // Lightbox galerie (klávesnice + swipe)

@@ -39,6 +39,25 @@ $schema[] = array_filter([
   </div>
 </section>
 
+<?php if (!empty($category['before_image']) && !empty($category['after_image'])
+          && image_url($category['before_image']) && image_url($category['after_image'])): ?>
+<section class="section section--tint">
+  <div class="container">
+    <div class="section__head"><h2><?= te('cat.compare_title') ?></h2><p class="muted"><?= te('cat.compare_hint') ?></p></div>
+    <figure class="compare" data-compare style="--pos: 50%">
+      <?= img($category['after_image'], t('cat.compare_after') . ' – ' . $title, 'compare__img') ?>
+      <div class="compare__before">
+        <?= img($category['before_image'], t('cat.compare_before') . ' – ' . $title, 'compare__img') ?>
+      </div>
+      <span class="compare__label compare__label--before"><?= te('cat.compare_before') ?></span>
+      <span class="compare__label compare__label--after"><?= te('cat.compare_after') ?></span>
+      <span class="compare__handle" aria-hidden="true"></span>
+      <input type="range" class="compare__range" min="0" max="100" value="50" step="1" aria-label="<?= te('cat.compare_hint') ?>">
+    </figure>
+  </div>
+</section>
+<?php endif; ?>
+
 <?php if ($children): ?>
 <section class="section section--tint">
   <div class="container">

@@ -162,10 +162,11 @@ if ($logged && $action !== '') {
         // Stránky
         case 'category_save':
             $slugEn = slugify(post('slug_en', 120));
-            q("UPDATE categories SET slug_en=?, title=?, title_en=?, menu_title=?, menu_title_en=?, headline=?, headline_en=?, intro=?, intro_en=?, body=?, body_en=?, meta_desc=?, meta_desc_en=?, sort=?, is_active=? WHERE id=?", [
+            q("UPDATE categories SET slug_en=?, title=?, title_en=?, menu_title=?, menu_title_en=?, headline=?, headline_en=?, intro=?, intro_en=?, body=?, body_en=?, meta_desc=?, meta_desc_en=?, before_image=?, after_image=?, sort=?, is_active=? WHERE id=?", [
                 nn($slugEn), post('title', 160), nn(post('title_en', 160)), nn(post('menu_title', 80)), nn(post('menu_title_en', 80)),
                 nn(post('headline', 200)), nn(post('headline_en', 200)), nn(post('intro', 2000)), nn(post('intro_en', 2000)),
                 nn(post('body', 100000)), nn(post('body_en', 100000)), nn(post('meta_desc', 300)), nn(post('meta_desc_en', 300)),
+                nn(ltrim(post('before_image', 255), '/')), nn(ltrim(post('after_image', 255), '/')),
                 (int) ($_POST['sort'] ?? 0), !empty($_POST['is_active']) ? 1 : 0, $id,
             ]);
             after_content_change();
@@ -619,6 +620,10 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
           <?= bi(t('adm.pages.f_intro'), 'intro', $c, 'text') ?>
           <?= bi(t('adm.pages.f_body'), 'body', $c, 'html', 10) ?>
           <?= bi(t('adm.pages.f_meta'), 'meta_desc', $c, 'text', 2) ?>
+          <div class="form__grid">
+            <label class="field"><?= te('adm.pages.f_before') ?><input type="text" name="before_image" value="<?= e($c['before_image'] ?? '') ?>" placeholder="orig/foto-pred.jpg"></label>
+            <label class="field"><?= te('adm.pages.f_after') ?><input type="text" name="after_image" value="<?= e($c['after_image'] ?? '') ?>" placeholder="orig/foto-po.jpg"></label>
+          </div>
           <div class="form__grid">
             <label class="field"><?= te('adm.sort') ?><input type="text" name="sort" value="<?= (int) $c['sort'] ?>"></label>
             <label class="check field"><input type="checkbox" name="is_active" value="1" <?= $c['is_active'] ? 'checked' : '' ?>><span><?= te('adm.pages.f_active') ?></span></label>

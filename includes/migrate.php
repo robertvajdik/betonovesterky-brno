@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 26;
+const DB_VERSION = 27;
 
 function db_migrate(): void
 {
@@ -135,6 +135,13 @@ function db_migrate(): void
         created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_event_starts (starts)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_czech_ci");
+
+    // v27: porovnání před/po na stránce kategorie
+    if (!$hasColumn('categories', 'before_image')) {
+        $try("ALTER TABLE categories ADD before_image VARCHAR(255) NULL AFTER cover_image, ADD after_image VARCHAR(255) NULL AFTER before_image");
+        q("UPDATE categories SET before_image = 'orig/realizace-betonove-sterky-v-kuchyni_603.jpg', after_image = 'orig/betonova-sterka-za-kuchynskou-deskou_605.jpg'
+           WHERE slug = 'do-kuchyne' AND before_image IS NULL AND after_image IS NULL");
+    }
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';
