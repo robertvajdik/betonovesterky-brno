@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Po nahrání nových souborů stačí otevřít web – chybějící tabulky, sloupce a texty se doplní samy.
  * Verze je uložena ve vlastnosti sys.db_version.
  */
-const DB_VERSION = 27;
+const DB_VERSION = 29;
 
 function db_migrate(): void
 {
@@ -142,6 +142,10 @@ function db_migrate(): void
         q("UPDATE categories SET before_image = 'orig/realizace-betonove-sterky-v-kuchyni_603.jpg', after_image = 'orig/betonova-sterka-za-kuchynskou-deskou_605.jpg'
            WHERE slug = 'do-kuchyne' AND before_image IS NULL AND after_image IS NULL");
     }
+
+    // v29: kuchyně – fotka „po“ zpět na _605 (v28 ji krátce měnila na _600)
+    q("UPDATE categories SET after_image = 'orig/betonova-sterka-za-kuchynskou-deskou_605.jpg'
+       WHERE slug = 'do-kuchyne' AND after_image = 'orig/betonova-sterka-za-kuchynskou-deskou_600.jpg'");
 
     // nové texty a nastavení (INSERT IGNORE – nepřepíše úpravy)
     $file = ROOT_DIR . '/database/migrate.sql';
