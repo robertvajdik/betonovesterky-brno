@@ -397,17 +397,13 @@ function render_field(array $f): string
     return '<label class="' . $cls . '">' . $label . $input . '</label>';
 }
 
-/** Zpracuje odeslaný poptávkový formulář; při úspěchu přesměruje na $returnUrl */
-function handle_inquiry(string $source, string $returnUrl): array
+/**
+ * Načte a zkontroluje odeslaná pole poptávky (f_*), vrátí [data, chyby].
+ * $required = false: povinnost polí se nekontroluje (ruční zadání v administraci).
+ */
+function inquiry_collect(array $fields, bool $required = true): array
 {
     $errors = [];
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || ($_POST['form'] ?? '') !== 'inquiry') return $errors;
-
-    if (!empty($_POST['website'])) redirect($returnUrl);       // honeypot
-    if (!csrf_ok()) return [t('form.err_csrf')];
-    if (!recaptcha_ok('inquiry')) return [t('form.err_captcha')];
-
-    $fields = form_fields();
     $data = [];
     foreach ($fields as $f) {
         $v = post('f_' . $f['fkey'], $f['type'] === 'textarea' ? 5000 : 300);
@@ -417,7 +413,7 @@ function handle_inquiry(string $source, string $returnUrl): array
             $d = DateTimeImmutable::createFromFormat('!Y-m-d', $v);
             $v = $d && $d->format('Y-m-d') === $v ? $v : '';
         }
-        if ($f['is_required'] && $v === '') {
+        if ($required && $f['is_required'] && $v === '') {
             $errors[] = t('form.err_required', ['field' => tr($f, 'label')]);
         }
         if ($f['type'] === 'email' && $v !== '' && !filter_var($v, FILTER_VALIDATE_EMAIL)) {
@@ -429,23 +425,49 @@ function handle_inquiry(string $source, string $returnUrl): array
     $from = $data['term_from']['value'] ?? '';
     $to   = $data['term_to']['value'] ?? '';
     if ($from !== '' && $to !== '' && $to < $from) $errors[] = t('form.err_dates');
-    if (empty($_POST['gdpr'])) $errors[] = t('form.err_gdpr');
-    $photos = inquiry_uploaded_photos();                   // fotky „co chcete natřít“ (includes/inquiry-files.php)
-    $errors = array_merge($errors, inquiry_photos_errors($photos));
-    if ($errors) return $errors;
+    return [$data, $errors];
+}
 
-    // data v e-mailu a administraci česky: 2026-11-07 → 7. 11. 2026
+/** Data v e-mailu a administraci česky: 2026-11-07 → 7. 11. 2026 */
+function inquiry_format_dates(array $fields, array &$data): void
+{
     foreach ($fields as $f) {
         if ($f['type'] === 'date' && ($data[$f['fkey']]['value'] ?? '') !== '') {
             $data[$f['fkey']]['value'] = date('j. n. Y', strtotime($data[$f['fkey']]['value']));
         }
     }
+}
 
-    $get = fn(string $k) => $data[$k]['value'] ?? '';
-    $email = $get('email');
-    if ($email === '') {                                   // e-mail pod jiným klíčem
-        foreach ($fields as $f) if ($f['type'] === 'email') { $email = $get($f['fkey']); break; }
+/** E-mail zákazníka z dat poptávky (pole „email“, jinak první pole typu e-mail) */
+function inquiry_email(array $fields, array $data): string
+{
+    $email = $data['email']['value'] ?? '';
+    if ($email === '') {
+        foreach ($fields as $f) if ($f['type'] === 'email') { $email = $data[$f['fkey']]['value'] ?? ''; break; }
     }
+    return $email;
+}
+
+/** Zpracuje odeslaný poptávkový formulář; při úspěchu přesměruje na $returnUrl */
+function handle_inquiry(string $source, string $returnUrl): array
+{
+    $errors = [];
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || ($_POST['form'] ?? '') !== 'inquiry') return $errors;
+
+    if (!empty($_POST['website'])) redirect($returnUrl);       // honeypot
+    if (!csrf_ok()) return [t('form.err_csrf')];
+    if (!recaptcha_ok('inquiry')) return [t('form.err_captcha')];
+
+    $fields = form_fields();
+    [$data, $errors] = inquiry_collect($fields);
+    if (empty($_POST['gdpr'])) $errors[] = t('form.err_gdpr');
+    $photos = inquiry_uploaded_photos();                   // fotky „co chcete natřít“ (includes/inquiry-files.php)
+    $errors = array_merge($errors, inquiry_photos_errors($photos));
+    if ($errors) return $errors;
+
+    inquiry_format_dates($fields, $data);
+    $get   = fn(string $k) => $data[$k]['value'] ?? '';
+    $email = inquiry_email($fields, $data);
 
     $customer = customer();
     q("INSERT INTO inquiries (customer_id, name, email, phone, location, message, data, source, lang, ip) VALUES (?,?,?,?,?,?,?,?,?,?)", [

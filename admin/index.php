@@ -79,6 +79,35 @@ if ($logged && $action !== '') {
         case 'inquiry_delete':
             inquiry_delete_photos($id);
             q("DELETE FROM inquiries WHERE id = ?", [$id]); back('tab=inquiries', t('adm.inq.deleted'));
+        case 'inquiry_create':
+            // ruční zadání poptávky (telefon, osobně…) – pole jako na webu, povinné je jen jméno
+            $fields = form_fields();
+            [$data, $errors] = inquiry_collect($fields, false);
+            if (($data['name']['value'] ?? '') === '') $errors[] = t('adm.inq.new_err_name');
+            $photos = inquiry_uploaded_photos();
+            $errors = array_merge($errors, inquiry_photos_errors($photos));
+            if ($errors) {
+                $_SESSION['inq_draft'] = ['post' => array_diff_key($_POST, ['csrf' => 1, 'action' => 1]), 'errors' => $errors];
+                back('tab=inquiries&new=1');
+            }
+            inquiry_format_dates($fields, $data);
+            $get    = fn(string $k) => $data[$k]['value'] ?? '';
+            $email  = inquiry_email($fields, $data);
+            $lang   = in_array($_POST['lang'] ?? '', LANGS, true) ? $_POST['lang'] : 'cs';
+            $status = in_array($_POST['status'] ?? '', INQUIRY_STATUSES, true) ? $_POST['status'] : 'new';
+            $custId = $email !== '' ? (q("SELECT id FROM customers WHERE email = ?", [$email])->fetchColumn() ?: null) : null;
+            q("INSERT INTO inquiries (customer_id, name, email, phone, location, message, data, source, lang, status, is_read) VALUES (?,?,?,?,?,?,?,?,?,?,1)", [
+                $custId, $get('name'), $email, $get('phone') ?: null, $get('location') ?: null, $get('message') ?: null,
+                json_encode($data, JSON_UNESCAPED_UNICODE), post('source', 40) ?: 'admin', $lang, $status,
+            ]);
+            $newId = (int) db()->lastInsertId();
+            inquiry_store_photos($newId, $photos);
+            $note = t('adm.inq.new_created', ['id' => $newId]);
+            if (!empty($_POST['notify']) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $sent = send_track_link($newId);
+                $note .= ' ' . ($sent ? t('adm.inq.link_sent_to', ['email' => $email]) : t('adm.inq.link_failed'));
+            }
+            back('tab=inquiries#q' . $newId, $note);
         case 'inquiry_reply':
             // odpověď zákazníkovi (+ změna stavu); registrovaný ji uvidí v účtu, všem přijde e-mailem
             $inq = q("SELECT i.*, c.email AS c_email, c.lang AS c_lang FROM inquiries i LEFT JOIN customers c ON c.id = i.customer_id WHERE i.id = ?", [$id])->fetch();
@@ -378,8 +407,40 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
       </details>
     <?php endif; ?>
 
-    <?php /* ================= POPTÁVKY ================= */ if ($tab === 'inquiries'): ?>
-      <h1><?= te('adm.tab.inquiries') ?></h1>
+    <?php /* ================= NOVÁ POPTÁVKA (ruční zadání) ================= */ if ($tab === 'inquiries' && isset($_GET['new'])):
+        $draft = $_SESSION['inq_draft'] ?? null; unset($_SESSION['inq_draft']);
+        $_POST = (array) ($draft['post'] ?? []);            // render_field() předvyplňuje z $_POST
+        $stLabels = []; foreach (INQUIRY_STATUSES as $st) $stLabels[$st] = t('adm.status.' . $st); ?>
+      <p><a href="<?= e(admin_url('tab=inquiries')) ?>"><?= te('adm.back') ?></a></p>
+      <h1><?= te('adm.inq.new_title') ?></h1>
+      <p class="muted"><?= te('adm.inq.new_hint') ?></p>
+      <?php if (!empty($draft['errors'])): ?>
+        <div class="alert alert--err" role="alert"><?php foreach ($draft['errors'] as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div>
+      <?php endif; ?>
+      <form method="post" class="form panel" enctype="multipart/form-data">
+        <?= csrf_field() ?><input type="hidden" name="action" value="inquiry_create">
+        <div class="form__grid">
+          <?php foreach (form_fields() as $f): $f['is_required'] = $f['fkey'] === 'name' ? 1 : 0; ?>
+            <?= render_field($f) ?>
+          <?php endforeach; ?>
+        </div>
+        <div class="form__grid">
+          <label><?= te('adm.inq.status') ?>
+            <select name="status"><?php foreach ($stLabels as $k => $v): ?><option value="<?= $k ?>"<?= ($_POST['status'] ?? 'new') === $k ? ' selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select></label>
+          <label><?= te('adm.inq.new_lang') ?>
+            <select name="lang"><?php foreach (LANGS as $l): ?><option value="<?= $l ?>"<?= ($_POST['lang'] ?? 'cs') === $l ? ' selected' : '' ?>><?= strtoupper($l) ?></option><?php endforeach; ?></select></label>
+          <label><?= te('adm.inq.new_source') ?>
+            <input type="text" name="source" maxlength="40" value="<?= e(post('source', 40) ?: t('adm.inq.new_source_default')) ?>"></label>
+        </div>
+        <label><?= te('adm.inq.photos') ?> <span class="muted">(max. <?= INQ_MAX_PHOTOS ?>)</span>
+          <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
+        <label class="check"><input type="checkbox" name="notify" value="1"<?= !$draft || !empty($_POST['notify']) ? ' checked' : '' ?>><span><?= te('adm.inq.new_notify') ?></span></label>
+        <button class="btn"><?= te('adm.inq.new_submit') ?></button>
+      </form>
+      <?php $_POST = []; ?>
+
+    <?php /* ================= POPTÁVKY ================= */ elseif ($tab === 'inquiries'): ?>
+      <h1><?= te('adm.tab.inquiries') ?> <a href="<?= e(admin_url('tab=inquiries&new=1')) ?>" class="btn btn--small"><?= te('adm.inq.new') ?></a></h1>
       <?php
         $sf   = in_array($_GET['status'] ?? '', INQUIRY_STATUSES, true) ? $_GET['status'] : '';
         $rows = q("SELECT i.*, c.name AS c_name, c.id AS c_id FROM inquiries i LEFT JOIN customers c ON c.id = i.customer_id"
