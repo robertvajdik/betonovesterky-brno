@@ -30,3 +30,6 @@ desktop.ini
 
 # hesla – nikdy necommitovat
 heslovnik.txt
+
+# config file – obsahuje přístupy k databázi a další citlivé údaje, viz
+config.php
