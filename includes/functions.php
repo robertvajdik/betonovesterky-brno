@@ -131,8 +131,33 @@ function whatsapp_url(): string
 /** Measurement ID Google Analytics, pokud je měření zapnuté a ID má správný tvar; jinak '' */
 function ga_id(): string
 {
-    $id = strtoupper(trim((string) (props()['ga.id']['value_cs'] ?? '')));
+    // odstranit i neviditelné znaky (nezlomitelná mezera, zero-width…) zkopírované z rozhraní Google
+    $id = preg_replace('~[^A-Z0-9-]~', '', strtoupper((string) (props()['ga.id']['value_cs'] ?? '')));
     return prop_bool('ga.enabled') && preg_match('~^G-[A-Z0-9]{4,}$~', $id) ? $id : '';
+}
+
+/**
+ * Meta description 110–160 znaků: vlastní text, doplněný větami z obsahu stránky ($more)
+ * a nakonec dovětkem seo.desc_suffix („Brno a okolí, zaměření a vzorky zdarma.“).
+ */
+function seo_desc(?string $text, ?string $more = null): string
+{
+    $clean = fn(?string $s): string => trim((string) preg_replace('~\s+~u', ' ', html_entity_decode(strip_tags(str_replace(['</p>', '<br>', '</li>', '</h2>', '</h3>'], ['. ', ' ', '. ', '. ', '. '], (string) $s)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    $d = rtrim($clean($text), ' .');
+    $d = $d !== '' ? $d . '.' : '';
+    if (mb_strlen($d) < 110 && $more) {
+        foreach (preg_split('~(?<=[.!?])\s+~u', $clean($more)) as $s) {
+            $s = trim(preg_replace('~\.{2,}~', '.', $s));
+            if (mb_strlen($s) < 20 || mb_stripos($d, rtrim($s, '.')) !== false) continue;
+            if (mb_strlen($d . ' ' . $s) > 160) break;
+            $d = trim($d . ' ' . $s);
+            if (mb_strlen($d) >= 110) break;
+        }
+    }
+    $suffix = trim(t('seo.desc_suffix'));
+    if (mb_strlen($d) < 110 && $suffix !== '' && $suffix !== 'seo.desc_suffix' && mb_strlen($d . ' ' . $suffix) <= 160) $d = trim($d . ' ' . $suffix);
+    if (mb_strlen($d) > 160) $d = rtrim(mb_substr($d, 0, (int) (mb_strrpos(mb_substr($d, 0, 158), ' ') ?: 158)), ' ,.;–-') . '…';
+    return $d;
 }
 
 /** Zásady ochrany osobních údajů: externí odkaz z nastavení, jinak vlastní stránka webu */
@@ -476,6 +501,7 @@ function sitemap_urls(): array
 function build_sitemap(): string
 {
     $x = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+       . '<?xml-stylesheet type="text/xsl" href="' . e(url('assets/sitemap.xsl')) . '"?>' . "\n"
        . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
     foreach (sitemap_urls() as $u) {
         foreach (['cs', 'en'] as $l) {

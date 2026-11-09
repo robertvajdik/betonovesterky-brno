@@ -27,3 +27,6 @@ desktop.ini
 
 # Tajný klíč pro odkazy zákazníků (generuje web)
 /includes/.app_key
+
+# hesla – nikdy necommitovat
+heslovnik.txt

@@ -1,6 +1,6 @@
 <?php /** @var array $errors */ $ok = flash('inquiry'); ?>
 <form method="post" class="form" id="formular" enctype="multipart/form-data"<?= recaptcha_attrs('inquiry') ?>>
-  <?php if ($ok): ?><div class="alert alert--ok" role="status"><?= e($ok) ?></div><?php endif; ?>
+  <?php if ($ok): ?><div class="alert alert--ok" role="status" data-ga-event="generate_lead" data-ga-form="inquiry"><?= e($ok) ?></div><?php endif; ?>
   <?php if (!empty($errors)): ?>
     <div class="alert alert--err" role="alert"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div>
   <?php endif; ?>

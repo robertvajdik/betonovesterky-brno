@@ -1,7 +1,7 @@
 <?php
 /** @var array $project */
 $title    = tr($project, 'title');
-$metaDesc = tr($project, 'summary') ?: $title;
+$metaDesc = seo_desc(tr($project, 'summary') ?: $title, tr($project, 'body'));
 $ogImage  = $project['cover_image'];
 $images   = gallery_for('project', (int) $project['id']);
 $others   = q("SELECT * FROM projects WHERE is_published = 1 AND id <> ? ORDER BY created_at DESC LIMIT 3", [$project['id']])->fetchAll();
@@ -11,7 +11,7 @@ $schema[] = array_filter([
     '@type'           => 'CreativeWork',
     '@id'             => abs_url(item_url($project)) . '#project',
     'name'            => $title,
-    'description'     => tr($project, 'summary') ?: null,
+    'description'     => $metaDesc ?: null,
     'url'             => abs_url(item_url($project)),
     'dateCreated'     => substr((string) $project['created_at'], 0, 10),
     'creator'         => ['@id' => business_id()],

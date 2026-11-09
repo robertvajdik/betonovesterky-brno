@@ -16,6 +16,11 @@ if ($CONFIG['base_url'] !== null) {
     $docRoot = str_replace('\\', '/', (string) realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
     $root    = str_replace('\\', '/', (string) realpath(__DIR__ . '/..'));
     $base    = ($docRoot !== '' && stripos($root, $docRoot) === 0) ? substr($root, strlen($docRoot)) : '';
+    // Hosting typu Vedos (/www/domains/<doména>/ + interní rewrite): adresa v prohlížeči podadresář neobsahuje
+    $reqUri  = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+    if ($base !== '' && PHP_SAPI !== 'cli' && stripos($reqUri, rtrim($base, '/') . '/') !== 0 && strcasecmp($reqUri, $base) !== 0) {
+        $base = '';
+    }
     define('BASE_URL', rtrim($base, '/'));
 }
 

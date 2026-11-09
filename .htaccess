@@ -6,6 +6,18 @@ ErrorDocument 404 /404.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # Produkce: vše na https://betonovesterky-brno.cz (http → https, www → bez www), 301
+  RewriteCond %{HTTP_HOST} betonovesterky-brno\.cz$ [NC]
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://betonovesterky-brno.cz%{REQUEST_URI} [R=301,L]
+  RewriteCond %{HTTP_HOST} ^www\.betonovesterky-brno\.cz$ [NC]
+  RewriteRule ^ https://betonovesterky-brno.cz%{REQUEST_URI} [R=301,L]
+  # staré odkazy s interní cestou hostingu (/domains/betonovesterky-brno.cz/…)
+  RewriteCond %{THE_REQUEST} \s/+domains/[^/]+(/\S*)?\s [NC]
+  RewriteRule ^ https://betonovesterky-brno.cz%1 [R=301,L,NE]
+
   # Pokud je web v podadresáři, nastavte např.: RewriteBase /betonovesterky/
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

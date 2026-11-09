@@ -1,7 +1,7 @@
 <?php
 /** @var array $category */
 $title    = tr($category, 'title');
-$metaDesc = tr($category, 'meta_desc') ?: tr($category, 'intro');
+$metaDesc = seo_desc(tr($category, 'meta_desc') ?: tr($category, 'intro'), tr($category, 'intro') . ' ' . tr($category, 'body'));
 $ogImage  = $category['cover_image'];
 $images   = gallery_for('category', (int) $category['id']);
 $parent   = $category['parent_id'] ? q("SELECT * FROM categories WHERE id = ?", [$category['parent_id']])->fetch() : null;

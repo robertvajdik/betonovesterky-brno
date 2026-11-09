@@ -24,23 +24,14 @@
     });
   });
 
-  // Souhlas s cookies → Google Analytics až po „Povolit měření“ (volba v cookie bs_consent na 180 dní)
+  // Google Analytics se načítá v <head> (Consent Mode v2); tady jen lišta souhlasu a události
+  var track = function (name, params) { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
+
+  // Souhlas s cookies (volba v cookie bs_consent na 180 dní) → přepnutí analytics_storage
   var consent = document.querySelector('[data-consent]');
   if (consent) {
-    var gaId = consent.getAttribute('data-ga');
     var readChoice = function () { var m = document.cookie.match(/(?:^|;\s*)bs_consent=(granted|denied)/); return m ? m[1] : ''; };
-    var loadGa = function () {
-      if (window.__gaLoaded) return;
-      window.__gaLoaded = true;
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = function () { window.dataLayer.push(arguments); };
-      window.gtag('js', new Date());
-      window.gtag('config', gaId);
-      var s = document.createElement('script');
-      s.async = true;
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
-      document.head.appendChild(s);
-    };
+    var setStorage = function (v) { if (typeof window.gtag === 'function') window.gtag('consent', 'update', { analytics_storage: v }); };
     var clearGaCookies = function () {
       document.cookie.split(';').forEach(function (c) {
         var name = c.split('=')[0].trim();
@@ -54,19 +45,33 @@
       });
     };
     var choice = readChoice();
-    if (choice === 'granted') loadGa(); else if (!choice) consent.hidden = false;
+    if (!choice) consent.hidden = false;
     consent.addEventListener('click', function (ev) {
       var btn = ev.target.closest('[data-consent-choice]');
       if (!btn) return;
       var val = btn.getAttribute('data-consent-choice'), before = readChoice();
       document.cookie = 'bs_consent=' + val + '; Max-Age=' + (180 * 86400) + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
       consent.hidden = true;
-      if (val === 'granted') loadGa();
-      else if (before === 'granted' || window.__gaLoaded) { clearGaCookies(); location.reload(); }   // odvolání souhlasu
+      setStorage(val);
+      if (val !== 'granted' && before === 'granted') { clearGaCookies(); location.reload(); }   // odvolání souhlasu
     });
     document.querySelectorAll('[data-consent-open]').forEach(function (b) {
       b.addEventListener('click', function () { consent.hidden = false; consent.querySelector('button').focus(); });
     });
+  }
+
+  // Konverze: telefon, e-mail, WhatsApp, odeslaná poptávka
+  if (typeof window.gtag === 'function') {
+    document.addEventListener('click', function (ev) {
+      var a = ev.target.closest && ev.target.closest('a[href]');
+      if (!a) return;
+      var h = a.getAttribute('href') || '';
+      var loc = a.classList.contains('call-fab') ? 'fab' : a.closest('.topbar') ? 'topbar' : a.closest('footer') ? 'footer' : a.closest('header') ? 'header' : 'content';
+      if (/^tel:/i.test(h)) track('click_phone', { link_location: loc });
+      else if (/^mailto:/i.test(h)) track('click_email', { link_location: loc });
+      else if (/wa\.me\/|api\.whatsapp\.com/i.test(h)) track('click_whatsapp', { link_location: loc });
+    });
+    document.querySelectorAll('[data-ga-event]').forEach(function (el) { track(el.getAttribute('data-ga-event'), { form: el.getAttribute('data-ga-form') || '' }); });
   }
 
   // reCAPTCHA v3: skript Googlu až při vyplňování formuláře, token se získá těsně před odesláním

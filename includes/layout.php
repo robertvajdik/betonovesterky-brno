@@ -4,7 +4,8 @@ $services     = services();
 $concrete     = category_by_slug('betonove-sterky');
 $concreteSubs = $concrete ? subcategories((int) $concrete['id']) : [];
 $homeTitle    = trim(t('seo.home_title'));
-$fullTitle    = $title ? $title . ' | ' . site('name')
+// dlouhé titulky (realizace) bez „| název webu“, aby se ve výsledcích Googlu neusekly (~60 znaků)
+$fullTitle    = $title ? (mb_strlen($title . ' | ' . site('name')) > 60 && mb_strlen($title) >= 30 ? $title : $title . ' | ' . site('name'))
               : (($homeTitle !== '' && $homeTitle !== 'seo.home_title') ? $homeTitle : site('name') . ' – ' . t('site.tagline'));
 $logoFile     = (string) (props()['img.logo']['value_cs'] ?? '');
 $logo         = image_url($logoFile);
@@ -47,6 +48,20 @@ $navLink = function (string $route, string $key) use ($current) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>">
+<?php if ($gaHead = ga_id()): /* Google Analytics – Consent Mode v2: bez souhlasu jen anonymní signály bez cookies, po „Povolit měření“ plné měření */ ?>
+<link rel="preconnect" href="https://www.googletagmanager.com">
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){ dataLayer.push(arguments); }
+gtag('consent', 'default', {
+  analytics_storage: /(?:^|;\s*)bs_consent=granted/.test(document.cookie) ? 'granted' : 'denied',
+  ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied'
+});
+gtag('js', new Date());
+gtag('config', <?= json_encode($gaHead) ?>, { content_group: <?= json_encode((string) $current) ?>, language: <?= json_encode(lang()) ?> });
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?= e(rawurlencode($gaHead)) ?>"></script>
+<?php endif; ?>
 </head>
 <body>
 
@@ -166,7 +181,7 @@ $navLink = function (string $route, string $key) use ($current) {
 </a>
 
 <?php if ($gaId): /* lišta souhlasu: Google Analytics se načte až po kliknutí na „Povolit měření“ */ ?>
-<div class="consent" data-consent data-ga="<?= e($gaId) ?>" role="dialog" aria-live="polite" aria-label="<?= te('consent.title') ?>" hidden>
+<div class="consent" data-consent role="dialog" aria-live="polite" aria-label="<?= te('consent.title') ?>" hidden>
   <div class="consent__text"><strong><?= te('consent.title') ?></strong> <?= te('consent.text') ?> <a href="<?= e(privacy_url()) ?>"><?= te('consent.more') ?></a></div>
   <div class="consent__actions">
     <button type="button" class="btn btn--small btn--light" data-consent-choice="denied"><?= te('consent.reject') ?></button>

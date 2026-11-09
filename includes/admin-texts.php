@@ -261,7 +261,7 @@ return [
     'adm.contract.invoice' => 'Vystavit fakturu',
     'adm.contract.invoice_deposit' => 'Zálohová faktura',
     'adm.ga.err_id' => 'Měření je zapnuté, ale Measurement ID nemá tvar G-XXXXXXXXXX – Google Analytics se nenačte.',
-    'adm.ga.info' => 'Google Analytics se načte, <strong>až když návštěvník v liště cookies klikne na „Povolit měření“</strong> – tak to vyžaduje GDPR a zákon o elektronických komunikacích. Kdo odmítne, ve statistikách se neobjeví. Texty lišty upravíte v Texty CZ/EN → Cookies.',
+    'adm.ga.info' => 'Google Analytics běží na všech stránkách v režimu <strong>Consent Mode v2</strong>: dokud návštěvník v liště cookies neklikne na „Povolit měření“, posílá Googlu jen anonymní signály bez cookies (Google z nich dopočítá chybějící návštěvy); po souhlasu měří naplno s cookies. Měří se i kliknutí na telefon, e-mail a WhatsApp a odeslané poptávky (události click_phone, click_email, click_whatsapp, generate_lead – v GA je označte jako klíčové události). Texty lišty upravíte v Texty CZ/EN → Cookies.',
     'adm.grp.consent' => 'Cookies – lišta souhlasu',
     'adm.inq.deposit' => 'záloha',
     'adm.inq.due_on' => 'splatnost {date}',
