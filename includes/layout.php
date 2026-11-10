@@ -173,6 +173,7 @@ gtag('config', <?= json_encode($gaHead) ?>, { content_group: <?= json_encode((st
     <span>© <?= date('Y') ?> <?= e(site('owner')) ?> · <?= te('footer.ico') ?> <?= e(site('ico')) ?></span>
     <a href="<?= e(privacy_url()) ?>"<?= $current === 'privacy' ? ' aria-current="page"' : '' ?>><?= te('footer.privacy') ?></a>
     <?php if ($gaId = ga_id()): ?><button type="button" class="link-btn footer__consent" data-consent-open><?= te('consent.settings') ?></button><?php endif; ?>
+    <a href="<?= e(url('admin/')) ?>" class="footer__admin" rel="nofollow" aria-label="Administrace" title="Administrace"><?= icon('settings', 16) ?></a>
   </div>
 </footer>
 

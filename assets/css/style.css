@@ -477,6 +477,8 @@ p { margin: 0 0 1em; }
 .consent__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .consent__actions .btn { min-height: 44px; }
 .footer__consent { color: inherit; font-size: inherit; text-decoration: underline; margin-left: 1rem; }
+.footer__admin { display: inline-flex; align-items: center; opacity: .45; transition: opacity .2s, transform .4s; }
+.footer__admin:hover, .footer__admin:focus-visible { opacity: 1; transform: rotate(60deg); }
 @media (max-width: 600px) {
   .consent { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); }
   .consent__actions, .consent__actions .btn { flex: 1 1 auto; }
