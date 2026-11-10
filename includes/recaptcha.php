@@ -3,30 +3,56 @@ declare(strict_types=1);
 
 // ---------------------------------------------------------------
 // Google reCAPTCHA v3 (neviditelná ochrana formulářů proti spamu)
-//  - klíče v config.php → 'recaptcha' => ['site_key', 'secret', 'min_score']
+//  - nastavení: Administrace → Nastavení → reCAPTCHA (vlastnosti rc.*)
+//  - záloha v config.php → 'recaptcha' => ['site_key', 'secret', 'min_score'] (použije se, když je pole v administraci prázdné)
+//  - config.php 'contact' / 'admin' => false formulář natvrdo vypne (nouzový přístup, když reCAPTCHA zablokuje přihlášení)
 //  - bez klíčů je ochrana vypnutá a formuláře fungují jako dřív
-//  - skript Googlu se načte až ve chvíli, kdy návštěvník začne formulář vyplňovat (main.js)
 // ---------------------------------------------------------------
 
-function recaptcha_on(): bool
+/** Akce formuláře → vypínač (akce bez vypínače jsou chráněné vždy, když jsou klíče) */
+const RECAPTCHA_SWITCH = ['inquiry' => 'contact', 'admin' => 'admin'];
+
+/** Sloučené nastavení: administrace (DB) má přednost, config.php je záloha */
+function recaptcha_cfg(): array
 {
     global $CONFIG;
-    return !empty($CONFIG['recaptcha']['site_key']) && !empty($CONFIG['recaptcha']['secret']);
+    $f = (array) ($CONFIG['recaptcha'] ?? []);
+    $p = props();
+    $db = fn(string $k): string => trim((string) ($p['rc.' . $k]['value_cs'] ?? ''));
+    $score = $db('min_score') !== '' ? (float) str_replace(',', '.', $db('min_score')) : (float) ($f['min_score'] ?? 0.5);
+    return [
+        'site_key'  => $db('site_key') ?: trim((string) ($f['site_key'] ?? '')),
+        'secret'    => $db('secret') ?: trim((string) ($f['secret'] ?? '')),
+        'min_score' => max(0.0, min(1.0, $score)),
+        'badge'     => isset($p['rc.badge']) && prop_bool('rc.badge'),
+    ];
+}
+
+/** Klíče vyplněné; s $action navíc ověří vypínač daného formuláře */
+function recaptcha_on(string $action = ''): bool
+{
+    global $CONFIG;
+    $rc = recaptcha_cfg();
+    if ($rc['site_key'] === '' || $rc['secret'] === '') return false;
+    $sw = RECAPTCHA_SWITCH[$action] ?? null;
+    if ($sw === null) return true;
+    if (($CONFIG['recaptcha'][$sw] ?? true) === false) return false;        // nouzové vypnutí v config.php
+    return !isset(props()['rc.' . $sw]) || prop_bool('rc.' . $sw);
 }
 
 /** Atributy pro <form>: data-recaptcha="akce" data-sitekey="…" (prázdné, když je ochrana vypnutá) */
 function recaptcha_attrs(string $action): string
 {
-    global $CONFIG;
-    if (!recaptcha_on()) return '';
-    return ' data-recaptcha="' . e($action) . '" data-sitekey="' . e((string) $CONFIG['recaptcha']['site_key']) . '"';
+    if (!recaptcha_on($action)) return '';
+    $rc = recaptcha_cfg();
+    return ' data-recaptcha="' . e($action) . '" data-sitekey="' . e($rc['site_key']) . '"' . ($rc['badge'] ? ' data-rc-badge="1"' : '');
 }
 
-/** Povinný text místo plovoucího odznaku Googlu (podmínky reCAPTCHA) */
-function recaptcha_note(): string
+/** Povinný text místo plovoucího odznaku Googlu (podmínky reCAPTCHA); se zapnutým odznakem nic */
+function recaptcha_note(string $action = ''): string
 {
-    if (!recaptcha_on()) return '';
-    return '<p class="recaptcha-note">' . str_replace(
+    if (!recaptcha_on($action) || recaptcha_cfg()['badge']) return '';
+    return '<style>.grecaptcha-badge{visibility:hidden!important}</style><p class="recaptcha-note">' . str_replace(
         ['{privacy}', '{terms}'],
         ['<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">' . te('form.recaptcha_privacy') . '</a>',
          '<a href="https://policies.google.com/terms" target="_blank" rel="noopener">' . te('form.recaptcha_terms') . '</a>'],
@@ -39,15 +65,14 @@ function recaptcha_note(): string
  */
 function recaptcha_ok(string $action): bool
 {
-    global $CONFIG;
-    if (!recaptcha_on()) return true;
+    if (!recaptcha_on($action)) return true;
     $token = (string) ($_POST['g-recaptcha-response'] ?? '');
     if ($token === '' || strlen($token) > 4000) return false;
 
     $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
     curl_setopt_array($ch, [
         CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 6,
-        CURLOPT_POSTFIELDS => http_build_query(['secret' => (string) $CONFIG['recaptcha']['secret'], 'response' => $token, 'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '']),
+        CURLOPT_POSTFIELDS => http_build_query(['secret' => recaptcha_cfg()['secret'], 'response' => $token, 'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '']),
     ]);
     $body = curl_exec($ch);
     if ($body === false) {
@@ -67,6 +92,6 @@ function recaptcha_ok(string $action): bool
         }
         return false;
     }
-    $min = (float) ($CONFIG['recaptcha']['min_score'] ?? 0.5);
+    $min = recaptcha_cfg()['min_score'];
     return ($r['action'] ?? '') === $action && (float) ($r['score'] ?? 0) >= $min;
 }

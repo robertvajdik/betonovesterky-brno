@@ -91,7 +91,8 @@
   };
   document.querySelectorAll('form[data-recaptcha]').forEach(function (form) {
     var key = form.getAttribute('data-sitekey'), action = form.getAttribute('data-recaptcha');
-    form.addEventListener('focusin', function () { loadRecaptcha(key).catch(function () {}); }, { once: true });
+    if (form.hasAttribute('data-rc-badge')) loadRecaptcha(key).catch(function () {});   // odznak hned viditelný
+    else form.addEventListener('focusin', function () { loadRecaptcha(key).catch(function () {}); }, { once: true });
     form.addEventListener('submit', function (ev) {
       if (form.getAttribute('data-rc-ready') === '1') return;
       ev.preventDefault();

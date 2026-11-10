@@ -758,3 +758,17 @@ UPDATE properties SET value_cs = 'Google Analytics běží na všech stránkách
 UPDATE properties SET value_cs = REPLACE(value_cs, 'Analytické cookies (Google Analytics) použijeme jen s vaším souhlasem', 'Návštěvnost webu měříme službou Google Analytics. Bez vašeho souhlasu posílá Googlu jen anonymní signály bez cookies (např. že byla zobrazena stránka), které nelze spojit s vaším prohlížečem. Analytické cookies použijeme jen s vaším souhlasem'), value_en = REPLACE(value_en, 'We use analytics cookies (Google Analytics) only with your consent', 'We measure website traffic with Google Analytics. Without your consent it only sends Google anonymous, cookieless signals (e.g. that a page was viewed) that cannot be linked to your browser. We use analytics cookies only with your consent') WHERE pkey = 'privacy.body' AND value_cs NOT LIKE '%signály bez cookies%';
 INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
 ('seo.desc_suffix', 'seo', 'line', 'Dovětek popisu ve vyhledávání (přidá se ke krátkým popisům kategorií a realizací, aby měly 110–160 znaků)', 'Brno a okolí, zaměření a vzorky zdarma.', 'Brno and surroundings, free measuring and samples.', 2);
+
+-- v31: reCAPTCHA v3 nastavitelná v administraci
+INSERT IGNORE INTO properties (pkey, grp, type, label, value_cs, value_en, sort) VALUES
+('rc.site_key', 'rc', 'line', 'Klíč webu (Site key)', '', '', 1),
+('rc.secret', 'rc', 'line', 'Tajný klíč (Secret key)', '', '', 2),
+('rc.min_score', 'rc', 'line', 'Minimální skóre (0 = propustit vše … 1 = nejpřísnější, doporučeno 0.5)', '0.5', '', 3),
+('rc.contact', 'rc', 'bool', 'Poptávkový formulář (Kontakt, Ceník)', '1', '', 4),
+('rc.admin', 'rc', 'bool', 'Přihlášení do administrace', '1', '', 5),
+('rc.badge', 'rc', 'bool', 'Zobrazit odznak reCAPTCHA v rohu stránky (jinak text pod formulářem)', '1', '', 6),
+('adm.sgrp.rc', 'adm', 'line', NULL, 'reCAPTCHA', '', 392),
+('adm.sec.rc_keys', 'adm', 'line', NULL, 'Klíče Google reCAPTCHA v3', '', 393),
+('adm.sec.rc_forms', 'adm', 'line', NULL, 'Chráněné formuláře', '', 394),
+('adm.rc.info', 'adm', 'html', NULL, 'Klíče typu <strong>v3 (na základě skóre)</strong> vytvoříte na <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener">google.com/recaptcha/admin</a> – přidejte doménu webu. Prázdná pole = použijí se klíče z config.php. Registrace, zapomenuté heslo, hodnocení a přihlášení zákazníka jsou chráněné vždy, když jsou klíče vyplněné. Kdyby vás reCAPTCHA nepustila do administrace, nastavte v config.php <code>''admin'' =&gt; false</code>.', '', 395);
+UPDATE properties SET value_cs = 'Ochrana formulářů reCAPTCHA v3: {state} (Nastavení → reCAPTCHA).' WHERE pkey = 'adm.mail.recaptcha' AND value_cs LIKE '%config.php%';

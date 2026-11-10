@@ -358,7 +358,11 @@ return [
     'adm.inq.send_link' => 'Poslat zákazníkovi odkaz',
     'adm.mail.off' => 'vypnutá',
     'adm.mail.on' => 'zapnutá',
-    'adm.mail.recaptcha' => 'Ochrana formulářů reCAPTCHA v3: {state} (klíče v config.php).',
+    'adm.mail.recaptcha' => 'Ochrana formulářů reCAPTCHA v3: {state} (Nastavení → reCAPTCHA).',
+    'adm.sgrp.rc' => 'reCAPTCHA',
+    'adm.sec.rc_keys' => 'Klíče Google reCAPTCHA v3',
+    'adm.sec.rc_forms' => 'Chráněné formuláře',
+    'adm.rc.info' => 'Klíče typu <strong>v3 (na základě skóre)</strong> vytvoříte na <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener">google.com/recaptcha/admin</a> – přidejte doménu webu. Prázdná pole = použijí se klíče z config.php. Registrace, zapomenuté heslo, hodnocení a přihlášení zákazníka jsou chráněné vždy, když jsou klíče vyplněné. Kdyby vás reCAPTCHA nepustila do administrace, nastavte v config.php <code>\'admin\' =&gt; false</code>.',
     'adm.mail.test_body' => 'Tento e-mail potvrzuje, že odesílání z webu funguje.
 
 Způsob odeslání: {transport}',

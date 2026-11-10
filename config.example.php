@@ -39,11 +39,14 @@ return [
     ],
 
     // Google reCAPTCHA v3 – ochrana formulářů proti spamu (https://www.google.com/recaptcha/admin, typ „v3“)
+    // Nastavuje se v Administraci → Nastavení → reCAPTCHA; tyto hodnoty jsou záloha, když jsou pole tam prázdná.
     // Prázdné klíče = ochrana vypnutá. min_score: 0.0 (vše propustit) … 1.0 (nejpřísnější), doporučeno 0.5.
     'recaptcha' => [
         'site_key'  => '',
         'secret'    => '',
         'min_score' => 0.5,
+        'contact'   => true,   // false = natvrdo vypnout u poptávkového formuláře (jinak rozhoduje administrace)
+        'admin'     => true,   // false = natvrdo vypnout u přihlášení do administrace (nouzový přístup)
     ],
 
     // Příspěvky z Facebooku na úvodní stránce (web je stahuje sám, 1× za hodinu). Postup získání tokenu: README → Facebook.

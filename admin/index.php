@@ -33,6 +33,10 @@ $hasUsers = (int) q("SELECT COUNT(*) FROM admin_users")->fetchColumn() > 0;
 $action   = $_POST['action'] ?? '';
 
 // ---------- Přihlášení / první účet ----------
+if (in_array($action, ['setup', 'login'], true) && csrf_ok() && !recaptcha_ok('admin')) {
+    usleep(500000);
+    back('', t('form.err_captcha'));
+}
 if ($action === 'setup' && !$hasUsers && csrf_ok()) {
     $u = post('username', 60); $p = (string) ($_POST['password'] ?? '');
     if ($u !== '' && strlen($p) >= 8) {
@@ -388,13 +392,46 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
   <div class="admin-login panel">
     <h1><?= te($hasUsers ? 'adm.login.title' : 'adm.login.setup_title') ?></h1>
     <?php if ($msg): ?><div class="alert alert--err"><?= e($msg) ?></div><?php endif; ?>
-    <form method="post" class="form">
+    <form method="post" class="form"<?= recaptcha_attrs('admin') ?>>
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="<?= $hasUsers ? 'login' : 'setup' ?>">
       <label><?= te('adm.login.username') ?><input type="text" name="username" required autocomplete="username"></label>
       <label><?= te('adm.login.password') ?><input type="password" name="password" required autocomplete="<?= $hasUsers ? 'current-password' : 'new-password' ?>"></label>
       <button class="btn"><?= te($hasUsers ? 'adm.login.btn' : 'adm.login.setup_btn') ?></button>
+      <?= recaptcha_note('admin') ?>
     </form>
+    <?php if (recaptcha_on('admin')): ?>
+    <script>
+    // reCAPTCHA v3 pro přihlášení (administrace nenačítá main.js)
+    (function () {
+      var form = document.querySelector('form[data-recaptcha]'); if (!form) return;
+      var key = form.getAttribute('data-sitekey'), loading = null;
+      var load = function () {
+        return loading || (loading = new Promise(function (ok, fail) {
+          var s = document.createElement('script');
+          s.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(key);
+          s.async = true; s.onerror = fail;
+          s.onload = function () { window.grecaptcha.ready(ok); };
+          document.head.appendChild(s);
+        }));
+      };
+      if (form.hasAttribute('data-rc-badge')) load().catch(function () {});
+      else form.addEventListener('focusin', function () { load().catch(function () {}); }, { once: true });
+      form.addEventListener('submit', function (ev) {
+        if (form.dataset.rcReady) return;
+        ev.preventDefault();
+        var done = false, finish = function (t) {
+          if (done) return; done = true;
+          var i = document.createElement('input'); i.type = 'hidden'; i.name = 'g-recaptcha-response'; i.value = t || '';
+          form.appendChild(i); form.dataset.rcReady = '1';
+          HTMLFormElement.prototype.submit.call(form);
+        };
+        setTimeout(function () { finish(''); }, 8000);
+        load().then(function () { return window.grecaptcha.execute(key, { action: 'admin' }); }).then(finish, function () { finish(''); });
+      });
+    })();
+    </script>
+    <?php endif; ?>
   </div>
 <?php else: ?>
   <?= admin_menu($tab) ?>
@@ -874,7 +911,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
     <?php /* ================= NASTAVENÍ ================= */ elseif ($tab === 'settings'): ?>
       <?php
         $sgroups = ['site' => t('adm.sgrp.site'), 'images' => t('adm.sgrp.images'), 'seo' => t('adm.sgrp.seo'),
-                    'robots' => t('adm.sgrp.robots'), 'ga' => t('adm.sgrp.ga'), 'inv' => t('adm.sgrp.inv')];
+                    'robots' => t('adm.sgrp.robots'), 'ga' => t('adm.sgrp.ga'), 'rc' => t('adm.sgrp.rc'), 'inv' => t('adm.sgrp.inv')];
         $grp = (string) ($_GET['grp'] ?? 'site');
         if (!isset($sgroups[$grp])) $grp = 'site';
         $all = props();
@@ -889,6 +926,8 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
                          'adm.sec.seo'      => ['seo.indexing', 'seo.jsonld', 'seo.microdata', 'seo.rdfa']],
             'robots' => ['adm.sec.robots'   => ['seo.robots_extra', 'seo.sitemap_auto']],
             'ga'     => ['adm.sec.ga'       => ['ga.enabled', 'ga.id']],
+            'rc'     => ['adm.sec.rc_keys'  => ['rc.site_key', 'rc.secret', 'rc.min_score'],
+                         'adm.sec.rc_forms' => ['rc.contact', 'rc.admin', 'rc.badge']],
             'inv'    => ['adm.sec.inv_bank' => ['site.bank', 'inv.iban'],
                          'adm.sec.inv_tax'  => ['inv.vat_payer', 'site.dic', 'inv.vat_rate', 'inv.registry'],
                          'adm.sec.inv_doc'  => ['inv.format', 'inv.due', 'inv.note']],
@@ -896,7 +935,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
         $listed = [];
         foreach ($layout as $secs) foreach ($secs as $keys) $listed = array_merge($listed, $keys);
         $sections = $layout[$grp];
-        $prefix = ['site' => 'site.', 'seo' => 'seo.', 'ga' => 'ga.', 'inv' => 'inv.'][$grp] ?? null;
+        $prefix = ['site' => 'site.', 'seo' => 'seo.', 'ga' => 'ga.', 'rc' => 'rc.', 'inv' => 'inv.'][$grp] ?? null;
         if ($prefix) {
             $rest = array_values(array_filter(array_keys($all), fn($k) => str_starts_with($k, $prefix) && !in_array($k, $listed, true)));
             if ($rest) $sections['adm.sec.other'] = $rest;
@@ -904,7 +943,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
         $bilingual = ['site.name', 'site.tagline', 'site.hours', 'seo.keywords', 'seo.home_title', 'seo.desc_suffix'];
         $inputType = ['site.email' => 'email', 'site.phone' => 'tel', 'site.whatsapp' => 'tel', 'site.facebook' => 'url', 'site.instagram' => 'url',
                       'site.gdpr_url' => 'url', 'site.domain' => 'url', 'site.years' => 'number', 'inv.due' => 'number', 'inv.vat_rate' => 'number'];
-        $placeholder = ['ga.id' => 'G-XXXXXXXXXX', 'site.domain' => 'https://www.betonovesterky-brno.cz', 'site.bank' => '123456789/0800', 'inv.format' => 'RRRR###'];
+        $placeholder = ['ga.id' => 'G-XXXXXXXXXX', 'rc.min_score' => '0.5', 'site.domain' => 'https://www.betonovesterky-brno.cz', 'site.bank' => '123456789/0800', 'inv.format' => 'RRRR###'];
         // „Popisek (nápověda)“ → popisek + nápověda pod polem
         $split = function (array $r, string $key): array {
             $l = (string) ($r['label'] ?: $key);
@@ -947,6 +986,10 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
       <?php if ($grp === 'ga'): $gaId = trim((string) ($all['ga.id']['value_cs'] ?? '')); ?>
         <div class="alert alert--info settings-note"><?= t('adm.ga.info') /* HTML */ ?></div>
         <?php if (prop_bool('ga.enabled') && ga_id() === ''): ?><div class="alert alert--err settings-note"><?= te('adm.ga.err_id') ?></div><?php endif; ?>
+      <?php endif; ?>
+      <?php if ($grp === 'rc'): ?>
+        <div class="alert alert--info settings-note"><?= t('adm.rc.info') /* HTML */ ?></div>
+        <div class="alert <?= recaptcha_on() ? 'alert--ok' : 'alert--err' ?> settings-note"><?= te('adm.mail.recaptcha', ['state' => t(recaptcha_on() ? 'adm.mail.on' : 'adm.mail.off')]) ?></div>
       <?php endif; ?>
       <?php if ($grp === 'inv'): $iban = invoice_iban(); ?>
         <div class="alert <?= $iban ? 'alert--ok' : 'alert--err' ?> settings-note"><?= $iban ? te('adm.inv.iban_ok', ['iban' => iban_format($iban)]) : te('adm.inv.iban_missing') ?></div>

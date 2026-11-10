@@ -485,8 +485,7 @@ p { margin: 0 0 1em; }
   .footer__consent { margin-left: 0; display: inline-block; padding: .55rem 0; }
 }
 
-/* reCAPTCHA v3: plovoucí odznak skrytý, místo něj povinný text pod formulářem */
-.grecaptcha-badge { visibility: hidden !important; }
+/* reCAPTCHA v3: plovoucí odznak Googlu, nebo (Nastavení → reCAPTCHA) skrytý odznak + povinný text pod formulářem */
 .recaptcha-note { margin: .2rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--concrete-600); }
 .recaptcha-note a { color: inherit; }
 

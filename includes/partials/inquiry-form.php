@@ -37,5 +37,5 @@
     <span><?= te('form.gdpr') ?> (<a href="<?= e(privacy_url()) ?>" target="_blank" rel="noopener"><?= te('form.gdpr_more') ?></a>).</span>
   </label>
   <button class="btn" type="submit"><?= te('form.submit') ?></button>
-  <?= recaptcha_note() ?>
+  <?= recaptcha_note('inquiry') ?>
 </form>
