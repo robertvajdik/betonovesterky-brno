@@ -466,24 +466,8 @@ p { margin: 0 0 1em; }
 @media (max-width: 600px) { .fb-post__more { padding: .6rem 0 .1rem; } }
 @media (max-width: 600px) { .fb-post:nth-child(n+4) { display: none; } }   /* na mobilu jen 3 nejnovější */
 
-/* ---------- Lišta souhlasu s cookies (Google Analytics) ---------- */
-.consent { position: fixed; z-index: 90; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 720px; margin: 0 auto;
-  display: flex; flex-wrap: wrap; gap: .8rem 1.2rem; align-items: center; justify-content: space-between; padding: 1rem 1.2rem;
-  background: var(--ink); color: var(--concrete-200); border-radius: var(--radius); box-shadow: 0 8px 30px rgba(0,0,0,.25); font-size: .92rem; }
-.consent[hidden] { display: none; }
-.consent strong { color: var(--white); }
-.consent a { color: var(--white); }
-.consent__text { flex: 1 1 320px; }
-.consent__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-.consent__actions .btn { min-height: 44px; }
-.footer__consent { color: inherit; font-size: inherit; text-decoration: underline; margin-left: 1rem; }
 .footer__admin { display: inline-flex; align-items: center; opacity: .45; transition: opacity .2s, transform .4s; }
 .footer__admin:hover, .footer__admin:focus-visible { opacity: 1; transform: rotate(60deg); }
-@media (max-width: 600px) {
-  .consent { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); }
-  .consent__actions, .consent__actions .btn { flex: 1 1 auto; }
-  .footer__consent { margin-left: 0; display: inline-block; padding: .55rem 0; }
-}
 
 /* reCAPTCHA v3: plovoucí odznak Googlu, nebo (Nastavení → reCAPTCHA) skrytý odznak + povinný text pod formulářem */
 .recaptcha-note { margin: .2rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--concrete-600); }

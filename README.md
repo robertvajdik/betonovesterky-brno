@@ -24,8 +24,7 @@ s administrací pro poptávky, smlouvy, faktury, hodnocení a obsah.
 - **Angličtina** na `/en/…` s vlastními adresami, přepínač jazyka.
 - **WhatsApp a Facebook** v horní liště, patičce a na kontaktu.
 - **Mobil** – jednořádková horní lišta, vysouvací menu, plovoucí tlačítko Zavolat, velké dotykové plochy.
-- **GDPR** – stránka Ochrana osobních údajů, lišta souhlasu s cookies (jen pokud je zapnutý Google Analytics),
-  mapa a příspěvky z Facebooku bez cookies třetích stran, chráněný e-mail proti spamobotům.
+- **GDPR** – stránka Ochrana osobních údajů, mapa a příspěvky z Facebooku bez cookies třetích stran, chráněný e-mail proti spamobotům.
 
 ## Administrace (`/admin/`)
 Menu je v levém sloupci (na mobilu nahoře) na všech stránkách administrace.
@@ -39,7 +38,7 @@ Menu je v levém sloupci (na mobilu nahoře) na všech stránkách administrace.
 | **Stránky** | texty služeb a podkategorií CZ/EN, anglické URL, meta popisy |
 | **Realizace** | případové studie CZ/EN |
 | **Formulář** | pole poptávkového formuláře (typ, popisek CZ/EN, povinné, možnosti, pořadí) |
-| **Texty CZ/EN** | všechny texty webu (tabulka `properties`), e-maily zákazníkům, lišta cookies, texty smlouvy |
+| **Texty CZ/EN** | všechny texty webu (tabulka `properties`), e-maily zákazníkům, texty smlouvy |
 | **Faktury** | přehled faktur, zaplacené / po splatnosti |
 | **Nastavení** | záložky Firma · Grafika · SEO · robots.txt a sitemap · Google Analytics · Faktury; zkušební e-mail |
 
@@ -110,8 +109,8 @@ Honeypot, CSRF token, omezení pokusů o přihlášení a volitelně **reCAPTCHA
 zapomenuté heslo). Skript Googlu se načte až při vyplňování formuláře. Když je Google nedostupný, formulář projde (chyba se zapíše do logu).
 
 ## Google Analytics
-Nastavení → Google Analytics: zapnout a vložit Measurement ID `G-…`. Měření se spustí až po kliknutí na „Povolit měření“
-v liště cookies (volba platí 180 dní, změna přes „Nastavení cookies“ v patičce).
+Nastavení → Google Analytics: zapnout a vložit Measurement ID `G-…`. Měří všechny návštěvníky hned od načtení stránky
+(bez lišty souhlasu s cookies).
 
 ## Facebook – příspěvky na úvodní stránce
 Web si posledních 6 příspěvků stahuje sám (Graph API, 1× za hodinu) a fotky ukládá do `uploads/fb/`.

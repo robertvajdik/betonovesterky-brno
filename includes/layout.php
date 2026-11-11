@@ -48,13 +48,13 @@ $navLink = function (string $route, string $key) use ($current) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>">
-<?php if ($gaHead = ga_id()): /* Google Analytics – Consent Mode v2: bez souhlasu jen anonymní signály bez cookies, po „Povolit měření“ plné měření */ ?>
+<?php if ($gaHead = ga_id()): /* Google Analytics – měří všechny návštěvníky (bez lišty souhlasu) */ ?>
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){ dataLayer.push(arguments); }
 gtag('consent', 'default', {
-  analytics_storage: /(?:^|;\s*)bs_consent=granted/.test(document.cookie) ? 'granted' : 'denied',
+  analytics_storage: 'granted',
   ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied'
 });
 gtag('js', new Date());
@@ -172,7 +172,6 @@ gtag('config', <?= json_encode($gaHead) ?>, { content_group: <?= json_encode((st
   <div class="container footer__bottom">
     <span>© <?= date('Y') ?> <?= e(site('owner')) ?> · <?= te('footer.ico') ?> <?= e(site('ico')) ?></span>
     <a href="<?= e(privacy_url()) ?>"<?= $current === 'privacy' ? ' aria-current="page"' : '' ?>><?= te('footer.privacy') ?></a>
-    <?php if ($gaId = ga_id()): ?><button type="button" class="link-btn footer__consent" data-consent-open><?= te('consent.settings') ?></button><?php endif; ?>
     <a href="<?= e(url('admin/')) ?>" class="footer__admin" rel="nofollow" aria-label="Administrace" title="Administrace"><?= icon('settings', 16) ?></a>
   </div>
 </footer>
@@ -180,16 +179,6 @@ gtag('config', <?= json_encode($gaHead) ?>, { content_group: <?= json_encode((st
 <a href="<?= e(tel_href(site('phone'))) ?>" class="call-fab" aria-label="<?= te('contact.phone') ?>">
   <?= icon('phone', 24) ?>
 </a>
-
-<?php if ($gaId): /* lišta souhlasu: Google Analytics se načte až po kliknutí na „Povolit měření“ */ ?>
-<div class="consent" data-consent role="dialog" aria-live="polite" aria-label="<?= te('consent.title') ?>" hidden>
-  <div class="consent__text"><strong><?= te('consent.title') ?></strong> <?= te('consent.text') ?> <a href="<?= e(privacy_url()) ?>"><?= te('consent.more') ?></a></div>
-  <div class="consent__actions">
-    <button type="button" class="btn btn--small btn--light" data-consent-choice="denied"><?= te('consent.reject') ?></button>
-    <button type="button" class="btn btn--small" data-consent-choice="granted"><?= te('consent.accept') ?></button>
-  </div>
-</div>
-<?php endif; ?>
 
 <div class="lightbox" hidden>
   <button class="lightbox__close" aria-label="<?= te('ui.close') ?>">×</button>

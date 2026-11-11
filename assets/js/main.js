@@ -24,41 +24,8 @@
     });
   });
 
-  // Google Analytics se načítá v <head> (Consent Mode v2); tady jen lišta souhlasu a události
+  // Google Analytics se načítá v <head> ; tady jen události
   var track = function (name, params) { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
-
-  // Souhlas s cookies (volba v cookie bs_consent na 180 dní) → přepnutí analytics_storage
-  var consent = document.querySelector('[data-consent]');
-  if (consent) {
-    var readChoice = function () { var m = document.cookie.match(/(?:^|;\s*)bs_consent=(granted|denied)/); return m ? m[1] : ''; };
-    var setStorage = function (v) { if (typeof window.gtag === 'function') window.gtag('consent', 'update', { analytics_storage: v }); };
-    var clearGaCookies = function () {
-      document.cookie.split(';').forEach(function (c) {
-        var name = c.split('=')[0].trim();
-        if (!/^_ga/.test(name)) return;
-        var host = location.hostname, parts = host.split('.');
-        for (var i = 0; i < parts.length - 1; i++) {
-          var d = parts.slice(i).join('.');
-          document.cookie = name + '=; Max-Age=0; path=/; domain=.' + d;
-        }
-        document.cookie = name + '=; Max-Age=0; path=/';
-      });
-    };
-    var choice = readChoice();
-    if (!choice) consent.hidden = false;
-    consent.addEventListener('click', function (ev) {
-      var btn = ev.target.closest('[data-consent-choice]');
-      if (!btn) return;
-      var val = btn.getAttribute('data-consent-choice'), before = readChoice();
-      document.cookie = 'bs_consent=' + val + '; Max-Age=' + (180 * 86400) + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
-      consent.hidden = true;
-      setStorage(val);
-      if (val !== 'granted' && before === 'granted') { clearGaCookies(); location.reload(); }   // odvolání souhlasu
-    });
-    document.querySelectorAll('[data-consent-open]').forEach(function (b) {
-      b.addEventListener('click', function () { consent.hidden = false; consent.querySelector('button').focus(); });
-    });
-  }
 
   // Konverze: telefon, e-mail, WhatsApp, odeslaná poptávka
   if (typeof window.gtag === 'function') {

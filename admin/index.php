@@ -868,7 +868,7 @@ function bi(string $label, string $name, ?array $row, string $type = 'line', int
     <?php /* ================= TEXTY CZ/EN ================= */ elseif ($tab === 'texts'): ?>
       <?php
         $groups = [];
-        foreach (['nav', 'home', 'cta', 'category', 'references', 'reviews', 'pricing', 'contact', 'privacy', 'contract', 'form', 'acc', 'status', 'mail', 'consent', 'misc'] as $g) $groups[$g] = t('adm.grp.' . $g);
+        foreach (['nav', 'home', 'cta', 'category', 'references', 'reviews', 'pricing', 'contact', 'privacy', 'contract', 'form', 'acc', 'status', 'mail', 'misc'] as $g) $groups[$g] = t('adm.grp.' . $g);
         $all = props();
         foreach ($all as $r) if (!isset($groups[$r['grp']]) && !in_array($r['grp'], ['site', 'images', 'seo', 'sys', 'adm', 'ga', 'inv'], true)) $groups[$r['grp']] = $r['grp'];
         $grp = (string) ($_GET['grp'] ?? 'home');
